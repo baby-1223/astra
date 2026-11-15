@@ -1,9 +1,19 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
-String newId() =>
-    DateTime.now().microsecondsSinceEpoch.toRadixString(36) +
-    (1000 + (DateTime.now().millisecond % 900)).toString();
+int _idSeq = 0;
+final Random _idRandom = Random();
+
+/// 生成唯一 ID。Windows 上系统时钟粒度较粗，同一毫秒内连续创建对象时
+/// 仅靠时间戳会重复，因此叠加进程内自增序号与随机后缀。
+String newId() {
+  _idSeq = (_idSeq + 1) % 0x100000;
+  final ts = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+  final seq = _idSeq.toRadixString(36).padLeft(3, '0');
+  final rnd = _idRandom.nextInt(0x10000).toRadixString(36);
+  return '$ts$seq$rnd';
+}
 
 class KV {
   bool on;

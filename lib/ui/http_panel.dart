@@ -2229,36 +2229,55 @@ class _MethodSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 100,
-      height: 32,
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B0F17),
-        border: Border.all(color: AstraColors.line),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: methods.contains(value) ? value : 'GET',
-          isDense: true,
-          isExpanded: true,
-          itemHeight: 34,
-          dropdownColor: AstraColors.surface2,
-          borderRadius: BorderRadius.circular(10),
-          menuMaxHeight: 340,
-          icon: const Icon(Icons.expand_more, size: 15, color: AstraColors.faint),
-          style: monoStyle(size: 13, weight: FontWeight.w700),
-          items: methods
-              .map((method) => DropdownMenuItem<String>(
-                    value: method,
-                    child: Text(method, style: monoStyle(size: 13, color: methodColor(method), weight: FontWeight.w700)),
-                  ))
-              .toList(),
-          onChanged: (next) {
-            if (next != null) onChanged(next);
-          },
+    final current = methods.contains(value) ? value : 'GET';
+    return PopupMenuButton<String>(
+      tooltip: '请求方法',
+      initialValue: current,
+      position: PopupMenuPosition.under,
+      color: AstraColors.surface2,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 100, maxWidth: 160),
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        for (final method in methods)
+          PopupMenuItem<String>(
+            value: method,
+            height: 34,
+            child: Text(
+              method,
+              style: monoStyle(
+                size: 13,
+                color: methodColor(method),
+                weight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+      child: Container(
+        width: 100,
+        height: 32,
+        padding: const EdgeInsets.only(left: 9, right: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B0F17),
+          border: Border.all(color: AstraColors.line),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                current,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: monoStyle(
+                  size: 13,
+                  color: methodColor(current),
+                  weight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.expand_more, size: 15, color: AstraColors.faint),
+          ],
         ),
       ),
     );
