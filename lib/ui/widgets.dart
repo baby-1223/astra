@@ -185,7 +185,11 @@ class GhostButton extends StatelessWidget {
         side: const BorderSide(color: AstraColors.line),
         backgroundColor: const Color(0x0AFFFFFF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+        textStyle: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w500,
+          fontFamilyFallback: kSansFallback,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -374,7 +378,10 @@ class KVEditor extends StatelessWidget {
             style: TextButton.styleFrom(
               foregroundColor: AstraColors.muted,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              textStyle: const TextStyle(fontSize: 11.5),
+              textStyle: const TextStyle(
+                fontSize: 11.5,
+                fontFamilyFallback: kSansFallback,
+              ),
             ),
             icon: const Icon(Icons.add, size: 14),
             label: const Text('添加一行'),
