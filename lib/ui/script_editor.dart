@@ -182,6 +182,7 @@ class _ScriptEditorState extends State<ScriptEditor> {
               expands: true,
               maxLines: null,
               minLines: null,
+              textAlignVertical: TextAlignVertical.top,
               style: _textStyle,
               strutStyle: const StrutStyle(fontSize: 11.5, height: 1.55),
               decoration: astraInput(

@@ -427,6 +427,7 @@ Future<void> showBulkEditDialog(
           expands: true,
           maxLines: null,
           minLines: null,
+          textAlignVertical: TextAlignVertical.top,
           style: monoStyle(size: 12, height: 1.55),
           decoration: astraInput(
             hint: 'Authorization: Bearer {{token}}\nAccept: application/json',
