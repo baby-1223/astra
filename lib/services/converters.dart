@@ -222,7 +222,7 @@ ImportResult importPostman(Map<String, dynamic> data) {
   void walk(dynamic items, String prefix) {
     for (final raw in _list(items).whereType<Map>()) {
       addVars(raw['variable']);
-      final name = _str(raw['name']).trim().isEmpty ? '未命名请求' : _str(raw['name']).trim();
+      final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
       final fullName = prefix.isEmpty ? name : '$prefix / $name';
       if (raw['item'] is List) {
         walk(raw['item'], fullName);
@@ -263,7 +263,7 @@ ImportResult importPostman(Map<String, dynamic> data) {
   return ImportResult(
     collections: collections,
     variables: variables,
-    name: _str(info['name']).isEmpty ? 'Postman 导入' : _str(info['name']),
+    name: _str(info['name']).isEmpty ? 'Postman Import' : _str(info['name']),
   );
 }
 
@@ -657,7 +657,7 @@ ImportResult importOpenApi(Map<String, dynamic> doc) {
   return ImportResult(
     collections: collections,
     variables: variables,
-    name: _str(info['title']).isEmpty ? 'OpenAPI 导入' : _str(info['title']),
+    name: _str(info['title']).isEmpty ? 'OpenAPI Import' : _str(info['title']),
   );
 }
 
@@ -769,7 +769,7 @@ Map<String, dynamic> toPostman(List<CollectionEntry> collections, Env env) {
 
   return {
     'info': {
-      'name': 'Astra 导出',
+      'name': 'Astra Export',
       'schema': 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
     'item': items,
@@ -883,7 +883,7 @@ Map<String, dynamic>? _exportOpenApiBody(ApiRequest request) {
 Map<String, dynamic> toOpenApi(List<CollectionEntry> collections, Env env) {
   final doc = <String, dynamic>{
     'openapi': '3.0.3',
-    'info': {'title': 'Astra 导出 API', 'version': '1.0.0'},
+    'info': {'title': 'Astra Export API', 'version': '1.0.0'},
     'servers': [
       {'url': 'http://localhost'},
     ],

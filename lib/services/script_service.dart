@@ -110,7 +110,7 @@ class ScriptService {
         return _failure(result.stringResult);
       }
       final dynamic decoded = jsonDecode(dumpText);
-      if (decoded is! Map) return _failure('脚本状态解析失败');
+      if (decoded is! Map) return _failure('Failed to parse script state');
 
       return _parse(
         Map<String, dynamic>.from(decoded),
@@ -169,7 +169,7 @@ class ScriptService {
     if (rawTests is List) {
       for (final raw in rawTests.whereType<Map>()) {
         tests.add(ScriptTestResult(
-          '${raw['name'] ?? '未命名断言'}',
+          '${raw['name'] ?? 'Unnamed assertion'}',
           passed: raw['passed'] == true,
           error: raw['error'] == null ? null : '${raw['error']}',
         ));
@@ -387,44 +387,44 @@ function __astraExpect(actual, negate) {
   var api = {};
   function assert(condition, message) {
     if (negate) {
-      if (condition) throw new Error(message || '断言失败');
+      if (condition) throw new Error(message || 'Assertion failed');
     } else if (!condition) {
-      throw new Error(message || '断言失败');
+      throw new Error(message || 'Assertion failed');
     }
   }
   function show(value) {
     try { return JSON.stringify(value); } catch (e) { return String(value); }
   }
   function equal(expected) {
-    assert(actual === expected, '期望 ' + show(expected) + '，实际 ' + show(actual));
+    assert(actual === expected, 'Expected ' + show(expected) + ', got ' + show(actual));
     return api;
   }
   function eql(expected) {
-    assert(show(actual) === show(expected), '期望 ' + show(expected) + '，实际 ' + show(actual));
+    assert(show(actual) === show(expected), 'Expected ' + show(expected) + ', got ' + show(actual));
     return api;
   }
   function above(value) {
-    assert(actual > value, '期望大于 ' + value + '，实际 ' + show(actual));
+    assert(actual > value, 'Expected a value greater than ' + value + ', got ' + show(actual));
     return api;
   }
   function least(value) {
-    assert(actual >= value, '期望不小于 ' + value + '，实际 ' + show(actual));
+    assert(actual >= value, 'Expected a value at least ' + value + ', got ' + show(actual));
     return api;
   }
   function below(value) {
-    assert(actual < value, '期望小于 ' + value + '，实际 ' + show(actual));
+    assert(actual < value, 'Expected a value less than ' + value + ', got ' + show(actual));
     return api;
   }
   function most(value) {
-    assert(actual <= value, '期望不大于 ' + value + '，实际 ' + show(actual));
+    assert(actual <= value, 'Expected a value at most ' + value + ', got ' + show(actual));
     return api;
   }
   function within(low, high) {
-    assert(actual >= low && actual <= high, '期望介于 ' + low + ' 与 ' + high + ' 之间，实际 ' + show(actual));
+    assert(actual >= low && actual <= high, 'Expected a value between ' + low + ' and ' + high + ', got ' + show(actual));
     return api;
   }
   function match(pattern) {
-    assert(new RegExp(pattern).test(String(actual)), '期望匹配 ' + pattern + '，实际 ' + show(actual));
+    assert(new RegExp(pattern).test(String(actual)), 'Expected to match ' + pattern + ', got ' + show(actual));
     return api;
   }
   function include(value) {
@@ -440,7 +440,7 @@ function __astraExpect(actual, negate) {
         if (actual[key] === value) { ok = true; break; }
       }
     }
-    assert(ok, '期望包含 ' + show(value));
+    assert(ok, 'Expected to include ' + show(value));
     return api;
   }
   function property(name, value) {
@@ -448,14 +448,14 @@ function __astraExpect(actual, negate) {
     var exists = actual !== null && actual !== undefined &&
       Object.prototype.hasOwnProperty.call(source, name);
     if (arguments.length > 1) {
-      assert(exists && show(actual[name]) === show(value), '期望属性 ' + name + ' 为 ' + show(value));
+      assert(exists && show(actual[name]) === show(value), 'Expected property ' + name + ' to be ' + show(value));
     } else {
-      assert(exists, '期望包含属性 ' + name);
+      assert(exists, 'Expected to have property ' + name);
     }
     return api;
   }
   function lengthOf(value) {
-    assert(actual !== null && actual !== undefined && actual.length === value, '期望长度为 ' + value);
+    assert(actual !== null && actual !== undefined && actual.length === value, 'Expected length ' + value);
     return api;
   }
   function typeOf(type) {
@@ -466,7 +466,7 @@ function __astraExpect(actual, negate) {
     else if (target === 'object') ok = actual !== null && typeof actual === 'object' && !Array.isArray(actual);
     else ok = typeof actual === target;
     var real = Array.isArray(actual) ? 'array' : (actual === null ? 'null' : typeof actual);
-    assert(ok, '期望类型为 ' + type + '，实际 ' + real);
+    assert(ok, 'Expected type ' + type + ', got ' + real);
     return api;
   }
   function constProp(name, check, message) {
@@ -511,18 +511,18 @@ function __astraExpect(actual, negate) {
   });
   Object.defineProperty(api, 'not', { get: function () { return __astraExpect(actual, !negate); } });
 
-  constProp('true', function () { return actual === true; }, '期望为 true');
-  constProp('false', function () { return actual === false; }, '期望为 false');
-  constProp('null', function () { return actual === null; }, '期望为 null');
-  constProp('undefined', function () { return actual === undefined; }, '期望为 undefined');
-  constProp('ok', function () { return !!actual; }, '期望为真，实际 ' + show(actual));
-  constProp('exist', function () { return actual !== null && actual !== undefined; }, '期望存在');
+  constProp('true', function () { return actual === true; }, 'Expected true');
+  constProp('false', function () { return actual === false; }, 'Expected false');
+  constProp('null', function () { return actual === null; }, 'Expected null');
+  constProp('undefined', function () { return actual === undefined; }, 'Expected undefined');
+  constProp('ok', function () { return !!actual; }, 'Expected a truthy value, got ' + show(actual));
+  constProp('exist', function () { return actual !== null && actual !== undefined; }, 'Expected to exist');
   constProp('empty', function () {
     if (actual === null || actual === undefined) return true;
     if (typeof actual === 'string' || Array.isArray(actual)) return actual.length === 0;
     if (typeof actual === 'object') return Object.keys(actual).length === 0;
     return false;
-  }, '期望为空');
+  }, 'Expected to be empty');
 
   return api;
 }
@@ -550,14 +550,14 @@ function __astraBuildResponse(data) {
     have: {
       status: function (code) {
         if (__astraResponse.code !== code) {
-          throw new Error('期望状态码 ' + code + '，实际 ' + __astraResponse.code);
+          throw new Error('Expected status code ' + code + ', got ' + __astraResponse.code);
         }
       },
       header: function (name) {
-        if (!__astraResponse.headers.has(name)) throw new Error('期望包含响应头 ' + name);
+        if (!__astraResponse.headers.has(name)) throw new Error('Expected response header ' + name);
       },
       body: function (expected) {
-        if (__astraResponse.text() !== expected) throw new Error('响应体与期望不一致');
+        if (__astraResponse.text() !== expected) throw new Error('Response body does not match');
       },
       jsonBody: function (path, value) {
         var body = __astraResponse.json();
@@ -568,12 +568,12 @@ function __astraBuildResponse(data) {
           }, body);
         }
         if (arguments.length < 2) {
-          if (actual === undefined) throw new Error('期望响应 JSON 包含 ' + path);
+          if (actual === undefined) throw new Error('Expected response JSON to contain ' + path);
           return;
         }
         if (JSON.stringify(actual) !== JSON.stringify(value)) {
-          throw new Error('期望 JSON 路径 ' + path + ' 为 ' + JSON.stringify(value) +
-            '，实际 ' + JSON.stringify(actual));
+          throw new Error('Expected JSON path ' + path + ' to be ' + JSON.stringify(value) +
+            ', got ' + JSON.stringify(actual));
         }
       }
     }
@@ -627,7 +627,7 @@ var pm = {
   },
   expect: function (actual) { return __astraExpect(actual, false); },
   sendRequest: function () {
-    __astraPush('warn', ['pm.sendRequest 在当前桌面版本暂不支持']);
+    __astraPush('warn', ['pm.sendRequest is not supported in this desktop version']);
   }
 };
 
@@ -653,7 +653,7 @@ function __astraDump() {
     });
   } catch (e) {
     return JSON.stringify({
-      error: '脚本状态导出失败：' + ((e && e.message) ? e.message : String(e))
+      error: 'Failed to export script state: ' + ((e && e.message) ? e.message : String(e))
     });
   }
 }

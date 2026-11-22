@@ -20,7 +20,7 @@ class BoundTextField extends StatefulWidget {
   /// 可用的变量名；非空时输入 `{{` 会弹出补全列表。
   final List<String> varNames;
 
-  const BoundTextField({
+  BoundTextField({
     super.key,
     required this.value,
     required this.onChanged,
@@ -153,24 +153,24 @@ class _BoundTextFieldState extends State<BoundTextField> {
       child: OverlayPortal(
         controller: _overlay,
         overlayChildBuilder: (context) {
-          if (_suggestions.isEmpty) return const SizedBox.shrink();
+          if (_suggestions.isEmpty) return SizedBox.shrink();
           return CompositedTransformFollower(
             link: _layerLink,
             targetAnchor: Alignment.bottomLeft,
             followerAnchor: Alignment.topLeft,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
             child: Align(
               alignment: Alignment.topLeft,
               child: Material(
                 color: Colors.transparent,
                 child: Container(
                   width: 220,
-                  constraints: const BoxConstraints(maxHeight: 190),
+                  constraints: BoxConstraints(maxHeight: 190),
                   decoration: BoxDecoration(
                     color: AstraColors.surface2,
                     border: Border.all(color: AstraColors.lineStrong),
                     borderRadius: BorderRadius.circular(9),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 8)),
                     ],
                   ),
@@ -187,8 +187,8 @@ class _BoundTextFieldState extends State<BoundTextField> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                           child: Row(
                             children: [
-                              const Icon(Icons.data_object, size: 12, color: AstraColors.accent),
-                              const SizedBox(width: 7),
+                              Icon(Icons.data_object, size: 12, color: AstraColors.accent),
+                              SizedBox(width: 7),
                               Expanded(
                                 child: Text(
                                   name,
@@ -197,7 +197,7 @@ class _BoundTextFieldState extends State<BoundTextField> {
                                   style: monoStyle(size: 11.5),
                                 ),
                               ),
-                              const Text(
+                              Text(
                                 '{{ }}',
                                 style: TextStyle(fontSize: 9, color: AstraColors.faint),
                               ),
@@ -237,7 +237,7 @@ class JsHighlightController extends TextEditingController {
     TextStyle? style,
     required bool withComposing,
   }) {
-    final base = style ?? const TextStyle();
+    final base = style ?? TextStyle();
     final spans = <TextSpan>[];
     var start = 0;
     for (final match in _pattern.allMatches(text)) {
@@ -248,11 +248,11 @@ class JsHighlightController extends TextEditingController {
       if (match.group(1) != null) {
         color = AstraColors.faint;
       } else if (match.group(2) != null) {
-        color = const Color(0xFF86D9A6);
+        color = AstraColors.codeString;
       } else if (match.group(3) != null) {
-        color = const Color(0xFFF0C674);
+        color = AstraColors.codeNumber;
       } else if (match.group(4) != null) {
-        color = const Color(0xFFC4B5FD);
+        color = AstraColors.codeKeyword;
       } else {
         color = AstraColors.accent;
       }

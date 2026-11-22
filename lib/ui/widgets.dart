@@ -8,19 +8,19 @@ import 'theme.dart';
 Color methodColor(String method) {
   switch (method.toUpperCase()) {
     case 'GET':
-      return const Color(0xFF67E8F9);
+      return AstraColors.methodGet;
     case 'POST':
-      return const Color(0xFF86EFAC);
+      return AstraColors.methodPost;
     case 'PUT':
-      return const Color(0xFFFCD34D);
+      return AstraColors.methodPut;
     case 'PATCH':
-      return const Color(0xFFC4B5FD);
+      return AstraColors.codeKeyword;
     case 'DELETE':
-      return const Color(0xFFFDA4AF);
+      return AstraColors.methodDelete;
     case 'WS':
-      return const Color(0xFFA5B4FC);
+      return AstraColors.methodWs;
     default:
-      return const Color(0xFFCBD5E1);
+      return AstraColors.methodOther;
   }
 }
 
@@ -36,7 +36,7 @@ class AstraCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
 
-  const AstraCard({
+  AstraCard({
     super.key,
     required this.child,
     this.padding,
@@ -49,15 +49,15 @@ class AstraCard extends StatelessWidget {
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x14FFFFFF), Color(0x05FFFFFF)],
+          colors: [AstraColors.overlay, AstraColors.overlay],
         ),
         color: AstraColors.surface,
         border: Border.all(color: AstraColors.line),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(color: Color(0x47000000), blurRadius: 44, offset: Offset(0, 16)),
         ],
       ),
@@ -70,14 +70,14 @@ class MethodBadge extends StatelessWidget {
   final String method;
   final double fontSize;
 
-  const MethodBadge({super.key, required this.method, this.fontSize = 9});
+  MethodBadge({super.key, required this.method, this.fontSize = 9});
 
   @override
   Widget build(BuildContext context) {
     final color = methodColor(method);
     return Container(
-      constraints: const BoxConstraints(minWidth: 42),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      constraints: BoxConstraints(minWidth: 42),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(5),
@@ -98,7 +98,7 @@ class GradientButton extends StatelessWidget {
   final bool danger;
   final EdgeInsetsGeometry padding;
 
-  const GradientButton({
+  GradientButton({
     super.key,
     required this.label,
     this.icon,
@@ -111,8 +111,8 @@ class GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     final gradient = danger
-        ? const LinearGradient(colors: [Color(0xFFFB7185), Color(0xFFF43F5E)])
-        : const LinearGradient(colors: [Color(0xFF67E8F9), Color(0xFF818CF8)]);
+        ? LinearGradient(colors: [Color(0xFFFB7185), Color(0xFFF43F5E)])
+        : LinearGradient(colors: [Color(0xFF67E8F9), Color(0xFF818CF8)]);
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: Material(
@@ -126,7 +126,7 @@ class GradientButton extends StatelessWidget {
                     BoxShadow(
                       color: (danger ? AstraColors.err : AstraColors.accent).withValues(alpha: 0.24),
                       blurRadius: 20,
-                      offset: const Offset(0, 6),
+                      offset: Offset(0, 6),
                     ),
                   ]
                 : null,
@@ -140,15 +140,15 @@ class GradientButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 15, color: const Color(0xFF05111B)),
-                    const SizedBox(width: 6),
+                    Icon(icon, size: 15, color: Color(0xFF05111B)),
+                    SizedBox(width: 6),
                   ],
                   Text(
                     label,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF05111B),
+                      color: Color(0xFF05111B),
                     ),
                   ),
                 ],
@@ -167,7 +167,7 @@ class GhostButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final EdgeInsetsGeometry padding;
 
-  const GhostButton({
+  GhostButton({
     super.key,
     required this.label,
     this.icon,
@@ -182,10 +182,10 @@ class GhostButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: AstraColors.text,
         padding: padding,
-        side: const BorderSide(color: AstraColors.line),
-        backgroundColor: const Color(0x0AFFFFFF),
+        side: BorderSide(color: AstraColors.line),
+        backgroundColor: AstraColors.overlay,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w500,
           fontFamilyFallback: kSansFallback,
@@ -196,7 +196,7 @@ class GhostButton extends StatelessWidget {
         children: [
           if (icon != null) ...[
             Icon(icon, size: 14, color: AstraColors.muted),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
           ],
           Text(label),
         ],
@@ -210,7 +210,7 @@ class AstraTabItem {
   final String label;
   final int? count;
 
-  const AstraTabItem(this.id, this.label, {this.count});
+  AstraTabItem(this.id, this.label, {this.count});
 }
 
 class AstraTabs extends StatelessWidget {
@@ -219,7 +219,7 @@ class AstraTabs extends StatelessWidget {
   final ValueChanged<String> onSelect;
   final bool compact;
 
-  const AstraTabs({
+  AstraTabs({
     super.key,
     required this.items,
     required this.selected,
@@ -257,13 +257,13 @@ class AstraTabs extends StatelessWidget {
                         ),
                       ),
                       if (item.count != null && item.count! > 0) ...[
-                        const SizedBox(width: 5),
+                        SizedBox(width: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: active
                                 ? AstraColors.accent.withValues(alpha: 0.18)
-                                : const Color(0x12FFFFFF),
+                                : AstraColors.overlay,
                             borderRadius: BorderRadius.circular(99),
                           ),
                           child: Text(
@@ -278,13 +278,13 @@ class AstraTabs extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: 5),
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
+                    duration: Duration(milliseconds: 160),
                     height: 2,
                     width: active ? 20 : 0,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [AstraColors.accent, AstraColors.accent2],
                       ),
                       borderRadius: BorderRadius.circular(99),
@@ -312,14 +312,14 @@ class KVEditor extends StatelessWidget {
   final List<String> keySuggestions;
   final VoidCallback? onBulkEdit;
 
-  const KVEditor({
+  KVEditor({
     super.key,
     required this.rows,
     required this.onChanged,
     required this.onAdd,
     required this.onRemove,
-    this.keyHint = '键',
-    this.valueHint = '值',
+    this.keyHint = 'Key',
+    this.valueHint = 'Value',
     this.enabledToggle = true,
     this.varNames = const [],
     this.keySuggestions = const [],
@@ -338,22 +338,22 @@ class KVEditor extends StatelessWidget {
               onPressed: onBulkEdit,
               style: TextButton.styleFrom(
                 foregroundColor: AstraColors.muted,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                textStyle: const TextStyle(fontSize: 10.5),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                textStyle: TextStyle(fontSize: 10.5),
               ),
-              child: const Text('批量编辑'),
+              child: Text('Bulk edit'),
             ),
           ),
         Padding(
-          padding: const EdgeInsets.only(left: 4, right: 4, bottom: 6),
+          padding: EdgeInsets.only(left: 4, right: 4, bottom: 6),
           child: Row(
             children: [
-              if (enabledToggle) const SizedBox(width: 30),
-              const SizedBox(width: 6),
+              if (enabledToggle) SizedBox(width: 30),
+              SizedBox(width: 6),
               Expanded(flex: 5, child: _label(keyHint)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(flex: 8, child: _label(valueHint)),
-              const SizedBox(width: 34),
+              SizedBox(width: 34),
             ],
           ),
         ),
@@ -377,14 +377,14 @@ class KVEditor extends StatelessWidget {
             onPressed: onAdd,
             style: TextButton.styleFrom(
               foregroundColor: AstraColors.muted,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              textStyle: const TextStyle(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              textStyle: TextStyle(
                 fontSize: 11.5,
                 fontFamilyFallback: kSansFallback,
               ),
             ),
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('添加一行'),
+            icon: Icon(Icons.add, size: 14),
+            label: Text('Add row'),
           ),
         ),
       ],
@@ -393,7 +393,7 @@ class KVEditor extends StatelessWidget {
 
   Widget _label(String text) => Text(
         text,
-        style: const TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
+        style: TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
       );
 }
 
@@ -407,7 +407,7 @@ class _KVRow extends StatefulWidget {
   final String keyHint;
   final String valueHint;
 
-  const _KVRow({
+  _KVRow({
     super.key,
     required this.row,
     required this.enabledToggle,
@@ -415,8 +415,8 @@ class _KVRow extends StatefulWidget {
     required this.onRemove,
     this.varNames = const [],
     this.keySuggestions = const [],
-    this.keyHint = '键',
-    this.valueHint = '值',
+    this.keyHint = 'Key',
+    this.valueHint = 'Value',
   });
 
   @override
@@ -439,7 +439,7 @@ class _KVRowState extends State<_KVRow> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           if (widget.enabledToggle)
@@ -450,7 +450,7 @@ class _KVRowState extends State<_KVRow> {
                 child: Checkbox(
                   value: widget.row.on,
                   activeColor: AstraColors.accent,
-                  side: const BorderSide(color: AstraColors.lineStrong),
+                  side: BorderSide(color: AstraColors.lineStrong),
                   onChanged: (value) {
                     widget.row.on = value ?? false;
                     setState(() {});
@@ -459,7 +459,7 @@ class _KVRowState extends State<_KVRow> {
                 ),
               ),
             ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Expanded(
             flex: 5,
             child: RawAutocomplete<String>(
@@ -467,7 +467,7 @@ class _KVRowState extends State<_KVRow> {
               focusNode: _keyFocus,
               optionsBuilder: (value) {
                 final text = value.text.trim().toLowerCase();
-                if (text.isEmpty) return const Iterable<String>.empty();
+                if (text.isEmpty) return Iterable<String>.empty();
                 return widget.keySuggestions
                     .where((item) => item.toLowerCase().startsWith(text))
                     .take(8);
@@ -485,7 +485,7 @@ class _KVRowState extends State<_KVRow> {
                   decoration: astraInput(
                     hint: widget.keyHint,
                     contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   ),
                   onChanged: (value) {
                     widget.row.k = value;
@@ -500,13 +500,13 @@ class _KVRowState extends State<_KVRow> {
                     color: Colors.transparent,
                     child: Container(
                       width: 240,
-                      constraints: const BoxConstraints(maxHeight: 190),
-                      margin: const EdgeInsets.only(top: 4),
+                      constraints: BoxConstraints(maxHeight: 190),
+                      margin: EdgeInsets.only(top: 4),
                       decoration: BoxDecoration(
                         color: AstraColors.surface2,
                         border: Border.all(color: AstraColors.lineStrong),
                         borderRadius: BorderRadius.circular(9),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
                             color: Color(0x66000000),
                             blurRadius: 18,
@@ -524,7 +524,7 @@ class _KVRowState extends State<_KVRow> {
                           return InkWell(
                             onTap: () => onSelected(option),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 10,
                                 vertical: 7,
                               ),
@@ -539,7 +539,7 @@ class _KVRowState extends State<_KVRow> {
               },
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             flex: 8,
             child: BoundTextField(
@@ -548,7 +548,7 @@ class _KVRowState extends State<_KVRow> {
               fontSize: 12,
               varNames: widget.varNames,
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onChanged: (value) {
                 _value.text = value;
                 widget.row.v = value;
@@ -559,11 +559,11 @@ class _KVRowState extends State<_KVRow> {
           SizedBox(
             width: 34,
             child: IconButton(
-              tooltip: '删除该行',
+              tooltip: 'Delete row',
               onPressed: widget.onRemove,
-              icon: const Icon(Icons.close, size: 15),
+              icon: Icon(Icons.close, size: 15),
               color: AstraColors.faint,
-              hoverColor: const Color(0x1AFB7185),
+              hoverColor: AstraColors.errSoft,
             ),
           ),
         ],
@@ -580,7 +580,7 @@ class AstraDialogShell extends StatelessWidget {
   final List<Widget> actions;
   final double width;
 
-  const AstraDialogShell({
+  AstraDialogShell({
     super.key,
     required this.title,
     this.subtitle,
@@ -593,16 +593,16 @@ class AstraDialogShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(32),
+      insetPadding: EdgeInsets.all(32),
       child: Container(
         width: width,
-        constraints: const BoxConstraints(maxHeight: 680),
-        padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+        constraints: BoxConstraints(maxHeight: 680),
+        padding: EdgeInsets.fromLTRB(22, 20, 22, 18),
         decoration: BoxDecoration(
           color: AstraColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AstraColors.line),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(color: Color(0x8C000000), blurRadius: 60, offset: Offset(0, 24)),
           ],
         ),
@@ -612,22 +612,22 @@ class AstraDialogShell extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 5),
+              SizedBox(height: 5),
               Text(
                 subtitle!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   color: AstraColors.muted,
                   height: 1.6,
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Flexible(child: child),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
           ],
         ),
@@ -640,17 +640,17 @@ class SectionLabel extends StatelessWidget {
   final String text;
   final String? hint;
 
-  const SectionLabel(this.text, {super.key, this.hint});
+  SectionLabel(this.text, {super.key, this.hint});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: AstraColors.muted,
               letterSpacing: 0.8,
@@ -658,11 +658,11 @@ class SectionLabel extends StatelessWidget {
             ),
           ),
           if (hint != null) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 hint!,
-                style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
+                style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
               ),
             ),
           ],
@@ -676,7 +676,7 @@ class CopyButton extends StatelessWidget {
   final String text;
   final String tooltip;
 
-  const CopyButton({super.key, required this.text, this.tooltip = '复制'});
+  CopyButton({super.key, required this.text, this.tooltip = 'Copy'});
 
   @override
   Widget build(BuildContext context) {
@@ -687,15 +687,15 @@ class CopyButton extends StatelessWidget {
         onTap: () {
           Clipboard.setData(ClipboardData(text: text));
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            const SnackBar(
-              content: Text('已复制到剪贴板'),
+            SnackBar(
+              content: Text('Copied to clipboard'),
               duration: Duration(milliseconds: 1200),
               behavior: SnackBarBehavior.floating,
               width: 220,
             ),
           );
         },
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(6),
           child: Icon(Icons.copy_rounded, size: 14, color: AstraColors.muted),
         ),
@@ -709,7 +709,7 @@ class EmptyHint extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const EmptyHint({
+  EmptyHint({
     super.key,
     required this.icon,
     required this.title,
@@ -737,13 +737,13 @@ class EmptyHint extends StatelessWidget {
             ),
             child: Icon(icon, size: 22, color: AstraColors.accent),
           ),
-          const SizedBox(height: 14),
-          Text(title, style: const TextStyle(fontSize: 13, color: AstraColors.muted)),
-          const SizedBox(height: 5),
+          SizedBox(height: 14),
+          Text(title, style: TextStyle(fontSize: 13, color: AstraColors.muted)),
+          SizedBox(height: 5),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11.5, color: AstraColors.faint, height: 1.7),
+            style: TextStyle(fontSize: 11.5, color: AstraColors.faint, height: 1.7),
           ),
         ],
       ),

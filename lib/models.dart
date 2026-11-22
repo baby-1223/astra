@@ -433,7 +433,7 @@ class WorkspaceTab {
     String? id,
     this.entryId = '',
     this.historyId = '',
-    this.name = '未命名 API',
+    this.name = 'Untitled API',
     this.mode = 'http',
     this.groupId = '',
     this.folderId = '',
@@ -459,7 +459,7 @@ class WorkspaceTab {
         id: '${json['id'] ?? newId()}',
         entryId: '${json['entryId'] ?? ''}',
         historyId: '${json['historyId'] ?? ''}',
-        name: '${json['name'] ?? '未命名 API'}',
+        name: '${json['name'] ?? 'Untitled API'}',
         mode: '${json['mode'] ?? 'http'}',
         groupId: '${json['groupId'] ?? ''}',
         folderId: '${json['folderId'] ?? ''}',
@@ -487,7 +487,7 @@ class CollectionEntry {
 
   CollectionEntry({
     String? id,
-    this.name = '未命名请求',
+    this.name = 'Untitled Request',
     this.mode = 'http',
     this.groupId = '',
     this.folderId = '',
@@ -518,7 +518,7 @@ class CollectionEntry {
 
   factory CollectionEntry.fromJson(Map<String, dynamic> json) => CollectionEntry(
         id: '${json['id'] ?? newId()}',
-        name: '${json['name'] ?? '未命名请求'}',
+        name: '${json['name'] ?? 'Untitled Request'}',
         mode: '${json['mode'] ?? 'http'}',
         groupId: '${json['groupId'] ?? ''}',
         folderId: '${json['folderId'] ?? ''}',
@@ -556,7 +556,7 @@ class RequestExample {
 
   RequestExample({
     String? id,
-    this.name = '示例',
+    this.name = 'Example',
     this.status = 200,
     this.body = '',
     Map<String, List<String>>? headers,
@@ -576,7 +576,7 @@ class RequestExample {
 
   factory RequestExample.fromJson(Map<String, dynamic> json) => RequestExample(
         id: '${json['id'] ?? newId()}',
-        name: '${json['name'] ?? '示例'}',
+        name: '${json['name'] ?? 'Example'}',
         status: int.tryParse('${json['status'] ?? 200}') ?? 200,
         body: '${json['body'] ?? ''}',
         headers: json['headers'] is Map
@@ -604,7 +604,7 @@ class CollectionFolder {
     String? id,
     this.groupId = '',
     this.parentId = '',
-    this.name = '新建文件夹',
+    this.name = 'New Folder',
     this.description = '',
     this.expanded = true,
     List<KV>? variables,
@@ -628,7 +628,7 @@ class CollectionFolder {
         id: '${json['id'] ?? newId()}',
         groupId: '${json['groupId'] ?? ''}',
         parentId: '${json['parentId'] ?? ''}',
-        name: '${json['name'] ?? '新建文件夹'}',
+        name: '${json['name'] ?? 'New Folder'}',
         description: '${json['description'] ?? ''}',
         expanded: json['expanded'] != false,
         variables: json['variables'] is List
@@ -655,7 +655,7 @@ class CollectionGroup {
 
   CollectionGroup({
     String? id,
-    this.name = '新建集合',
+    this.name = 'New Collection',
     this.mode = 'http',
     this.description = '',
     this.expanded = true,
@@ -677,7 +677,7 @@ class CollectionGroup {
 
   factory CollectionGroup.fromJson(Map<String, dynamic> json) => CollectionGroup(
         id: '${json['id'] ?? newId()}',
-        name: '${json['name'] ?? '新建集合'}',
+        name: '${json['name'] ?? 'New Collection'}',
         mode: '${json['mode'] ?? 'http'}',
         description: '${json['description'] ?? ''}',
         expanded: json['expanded'] != false,
@@ -698,7 +698,7 @@ class Env {
   String name;
   List<KV> vars;
 
-  Env({String? id, this.name = '默认环境', List<KV>? vars})
+  Env({String? id, this.name = 'Default Environment', List<KV>? vars})
       : id = id ?? newId(),
         vars = vars ?? [KV()];
 
@@ -712,7 +712,7 @@ class Env {
 
   factory Env.fromJson(Map<String, dynamic> json) => Env(
         id: json['id'] == null ? null : '${json['id']}',
-        name: '${json['name'] ?? '默认环境'}',
+        name: '${json['name'] ?? 'Default Environment'}',
         vars: json['vars'] is List
             ? (json['vars'] as List)
                 .whereType<Map>()
@@ -956,6 +956,8 @@ class RunStepResult {
   final List<String> failures;
   final String? error;
   final String body;
+  final int testPassed;
+  final int testTotal;
 
   RunStepResult({
     required this.entryId,
@@ -968,6 +970,8 @@ class RunStepResult {
     required this.failures,
     required this.error,
     required this.body,
+    this.testPassed = 0,
+    this.testTotal = 0,
   });
 
   bool get passed => error == null && failures.isEmpty && status != null && status! < 400;
@@ -982,6 +986,8 @@ class RunStepResult {
         'iteration': iteration,
         'failures': failures,
         'error': error,
+        'testPassed': testPassed,
+        'testTotal': testTotal,
       };
 }
 
@@ -1045,7 +1051,7 @@ class MonitorConfig {
   MonitorConfig({
     String? id,
     this.groupId = '',
-    this.name = '定时监控',
+    this.name = 'Scheduled Monitor',
     this.intervalMinutes = 30,
     this.iterations = 1,
     this.enabled = false,
@@ -1071,7 +1077,7 @@ class MonitorConfig {
   factory MonitorConfig.fromJson(Map<String, dynamic> json) => MonitorConfig(
         id: '${json['id'] ?? newId()}',
         groupId: '${json['groupId'] ?? ''}',
-        name: '${json['name'] ?? '定时监控'}',
+        name: '${json['name'] ?? 'Scheduled Monitor'}',
         intervalMinutes: int.tryParse('${json['intervalMinutes'] ?? 30}') ?? 30,
         iterations: int.tryParse('${json['iterations'] ?? 1}') ?? 1,
         enabled: json['enabled'] == true,

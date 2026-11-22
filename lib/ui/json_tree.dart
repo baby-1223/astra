@@ -9,7 +9,7 @@ import 'theme.dart';
 class JsonTreeView extends StatefulWidget {
   final dynamic data;
 
-  const JsonTreeView({super.key, required this.data});
+  JsonTreeView({super.key, required this.data});
 
   @override
   State<JsonTreeView> createState() => _JsonTreeViewState();
@@ -106,9 +106,9 @@ class _JsonTreeViewState extends State<JsonTreeView> {
 
   Color _scalarColor(dynamic value) {
     if (value == null) return AstraColors.faint;
-    if (value is String) return const Color(0xFF86D9A6);
-    if (value is num) return const Color(0xFFF0C674);
-    if (value is bool) return const Color(0xFFC4B5FD);
+    if (value is String) return AstraColors.codeString;
+    if (value is num) return AstraColors.codeNumber;
+    if (value is bool) return AstraColors.codeKeyword;
     return AstraColors.text;
   }
 
@@ -148,8 +148,8 @@ class _JsonTreeViewState extends State<JsonTreeView> {
       spans.add(TextSpan(
         text: text.substring(index, index + query.length),
         style: style.copyWith(
-          backgroundColor: const Color(0x4DFBBF24),
-          color: const Color(0xFFFFE7A3),
+          backgroundColor: AstraColors.warnSoft,
+          color: AstraColors.codeMatch,
         ),
       ));
       start = index + query.length;
@@ -176,37 +176,37 @@ class _JsonTreeViewState extends State<JsonTreeView> {
               height: 30,
               child: TextField(
                 controller: _search,
-                style: const TextStyle(fontSize: 11.5, color: AstraColors.text),
-                decoration: astraInput(hint: '搜索键名或值', contentPadding: const EdgeInsets.symmetric(horizontal: 10)),
+                style: TextStyle(fontSize: 11.5, color: AstraColors.text),
+                decoration: astraInput(hint: 'Search keys or values', contentPadding: EdgeInsets.symmetric(horizontal: 10)),
                 onChanged: (value) => setState(() => _query = value.trim()),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             if (_query.isNotEmpty)
               Text(
-                '${rows.length} 行匹配',
-                style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
+                '${rows.length} matches',
+                style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
               ),
-            const Spacer(),
-            _miniAction('全部展开', () => _toggleAll(false)),
-            const SizedBox(width: 6),
-            _miniAction('全部折叠', () => _toggleAll(true)),
-            const SizedBox(width: 6),
-            _miniAction('复制 JSON', () async {
+            Spacer(),
+            _miniAction('Expand All', () => _toggleAll(false)),
+            SizedBox(width: 6),
+            _miniAction('Collapse All', () => _toggleAll(true)),
+            SizedBox(width: 6),
+            _miniAction('Copy JSON', () async {
               final text = const JsonEncoder.withIndent('  ').convert(widget.data);
               await Clipboard.setData(ClipboardData(text: text));
             }),
           ],
         ),
-        const SizedBox(height: 8),
-        const Divider(height: 1, color: AstraColors.line),
+        SizedBox(height: 8),
+        Divider(height: 1, color: AstraColors.line),
         Expanded(
           child: rows.isEmpty
-              ? const Center(
-                  child: Text('没有匹配的内容', style: TextStyle(fontSize: 12, color: AstraColors.faint)),
+              ? Center(
+                  child: Text('No matching content', style: TextStyle(fontSize: 12, color: AstraColors.faint)),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   itemCount: rows.length,
                   itemBuilder: (context, index) => _rowWidget(rows[index]),
                 ),
@@ -220,8 +220,8 @@ class _JsonTreeViewState extends State<JsonTreeView> {
       borderRadius: BorderRadius.circular(6),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        child: Text(label, style: const TextStyle(fontSize: 10.5, color: AstraColors.muted)),
+        padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        child: Text(label, style: TextStyle(fontSize: 10.5, color: AstraColors.muted)),
       ),
     );
   }
@@ -249,14 +249,14 @@ class _JsonTreeViewState extends State<JsonTreeView> {
               child: row.container
                   ? AnimatedRotation(
                       turns: row.expanded ? 0.25 : 0,
-                      duration: const Duration(milliseconds: 120),
-                      child: const Icon(Icons.chevron_right, size: 13, color: AstraColors.faint),
+                      duration: Duration(milliseconds: 120),
+                      child: Icon(Icons.chevron_right, size: 13, color: AstraColors.faint),
                     )
                   : null,
             ),
             if (hasLabel) ...[
               _highlight(row.label, AstraColors.accent),
-              const Text(' : ', style: TextStyle(fontSize: 11.8, color: AstraColors.faint)),
+              Text(' : ', style: TextStyle(fontSize: 11.8, color: AstraColors.faint)),
             ],
             if (row.container)
               _countBadge(row.value)

@@ -57,7 +57,7 @@ class WsService {
           _subscription = null;
           _client?.close(force: true);
           _client = null;
-          onClose(wasManual ? '连接已关闭' : '连接被对端关闭');
+          onClose(wasManual ? 'Connection closed' : 'Connection closed by peer');
         },
         cancelOnError: true,
       );
@@ -65,13 +65,13 @@ class WsService {
     } catch (err) {
       _client = null;
       client.close(force: true);
-      throw Exception('连接失败：$err');
+      throw Exception('Connection failed: $err');
     }
   }
 
   void send(String text) {
     final socket = _socket;
-    if (socket == null) throw Exception('尚未建立连接');
+    if (socket == null) throw Exception('Not connected');
     socket.add(text);
   }
 

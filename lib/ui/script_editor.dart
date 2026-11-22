@@ -10,7 +10,7 @@ class ScriptEditor extends StatefulWidget {
   final String hint;
   final double height;
 
-  const ScriptEditor({
+  ScriptEditor({
     super.key,
     required this.value,
     required this.onChanged,
@@ -136,7 +136,7 @@ class _ScriptEditorState extends State<ScriptEditor> {
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F17),
+        color: AstraColors.inset,
         border: Border.all(color: AstraColors.line),
         borderRadius: BorderRadius.circular(10),
       ),
@@ -158,7 +158,7 @@ class _ScriptEditorState extends State<ScriptEditor> {
                       return Container(
                         height: lineHeight,
                         alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: EdgeInsets.only(right: 8),
                         child: Text(
                           '${index + 1}',
                           style: TextStyle(
@@ -174,7 +174,7 @@ class _ScriptEditorState extends State<ScriptEditor> {
               ),
             ),
           ),
-          const VerticalDivider(width: 1, color: AstraColors.line),
+          VerticalDivider(width: 1, color: AstraColors.line),
           Expanded(
             child: TextField(
               controller: _controller,

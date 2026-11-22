@@ -11,7 +11,7 @@ import 'widgets.dart';
 class TopBar extends StatelessWidget {
   final AppState state;
 
-  const TopBar({super.key, required this.state});
+  TopBar({super.key, required this.state});
 
   Future<void> _import(BuildContext context) async {
     try {
@@ -23,7 +23,7 @@ class TopBar extends StatelessWidget {
       if (!context.mounted) return;
       await showMessageDialog(
         context,
-        title: '导入失败',
+        title: 'Import Failed',
         message: err.message,
         error: true,
       );
@@ -31,7 +31,7 @@ class TopBar extends StatelessWidget {
       if (!context.mounted) return;
       await showMessageDialog(
         context,
-        title: '导入失败',
+        title: 'Import Failed',
         message: '$err',
         error: true,
       );
@@ -60,12 +60,12 @@ class TopBar extends StatelessWidget {
           name = 'astra-$suffix.json';
       }
       final path = await saveJsonFile(name, data);
-      if (path != null) state.showToast('已导出：$path');
+      if (path != null) state.showToast('Exported: $path');
     } catch (err) {
       if (!context.mounted) return;
       await showMessageDialog(
         context,
-        title: '导出失败',
+        title: 'Export Failed',
         message: '$err',
         error: true,
       );
@@ -76,65 +76,68 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: const BoxDecoration(
-        color: Color(0xB307090E),
+      padding: EdgeInsets.symmetric(horizontal: 18),
+      decoration: BoxDecoration(
+        color: AstraColors.topBar,
         border: Border(bottom: BorderSide(color: AstraColors.line)),
       ),
       child: Row(
         children: [
-          const _Brand(),
+          _Brand(),
           Expanded(
             child: Center(
-              child: _ModeSwitch(
-                mode: state.mode,
-                onChanged: state.switchMode,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _ModeSwitch(
+                  mode: state.mode,
+                  onChanged: state.switchMode,
+                ),
               ),
             ),
           ),
           _IconAction(
             icon: Icons.data_object,
-            tooltip: '变量面板与优先级',
+            tooltip: 'Variables & scope precedence',
             onTap: () => showVariablesDialog(context, state),
           ),
           _IconAction(
             icon: Icons.playlist_play,
-            tooltip: '集合运行器',
+            tooltip: 'Collection Runner',
             onTap: () => showRunnerDialog(context, state),
           ),
           _IconAction(
             icon: Icons.lan_outlined,
-            tooltip: '代理与客户端证书',
+            tooltip: 'Proxy & client certificates',
             onTap: () => showNetworkSettingsDialog(context, state),
           ),
           _IconAction(
             icon: Icons.keyboard_outlined,
-            tooltip: '快捷键',
+            tooltip: 'Keyboard Shortcuts',
             onTap: () => showShortcutsDialog(context),
           ),
           _EnvChip(state: state),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _IconAction(
             icon: Icons.cookie_outlined,
-            tooltip: 'Cookie 管理',
+            tooltip: 'Cookie Manager',
             badge: state.cookies.length,
             onTap: () => showCookieDialog(context, state),
           ),
           _IconAction(
             icon: Icons.file_download_outlined,
-            tooltip: '导入 Postman / OpenAPI / Astra',
+            tooltip: 'Import Postman / OpenAPI / Astra',
             onTap: () => _import(context),
           ),
           _IconAction(
             icon: Icons.ios_share_rounded,
-            tooltip: '导出工作区',
+            tooltip: 'Export Workspace',
             onTap: () => _export(context),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           GhostButton(
-            label: '新建',
+            label: 'New',
             icon: Icons.add,
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            padding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
             onPressed: state.newRequest,
           ),
         ],
@@ -144,7 +147,7 @@ class TopBar extends StatelessWidget {
 }
 
 class _Brand extends StatelessWidget {
-  const _Brand();
+  _Brand();
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +159,7 @@ class _Brand extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AstraColors.accent, AstraColors.accent2],
               ),
               borderRadius: BorderRadius.circular(10),
@@ -167,18 +170,18 @@ class _Brand extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.auto_awesome, size: 17, color: Color(0xFF06121C)),
+            child: Icon(Icons.auto_awesome, size: 17, color: Color(0xFF06121C)),
           ),
-          const SizedBox(width: 11),
+          SizedBox(width: 11),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ShaderMask(
-                shaderCallback: (rect) => const LinearGradient(
+                shaderCallback: (rect) => LinearGradient(
                   colors: [Color(0xFF8BE9FF), Color(0xFFC4B5FD)],
                 ).createShader(rect),
-                child: const Text(
+                child: Text(
                   'ASTRA',
                   style: TextStyle(
                     fontSize: 14.5,
@@ -188,8 +191,8 @@ class _Brand extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 1),
-              const Text(
+              SizedBox(height: 1),
+              Text(
                 'HTTP / WEBSOCKET STUDIO',
                 style: TextStyle(fontSize: 7.5, letterSpacing: 1.5, color: AstraColors.faint),
               ),
@@ -205,14 +208,14 @@ class _ModeSwitch extends StatelessWidget {
   final String mode;
   final ValueChanged<String> onChanged;
 
-  const _ModeSwitch({required this.mode, required this.onChanged});
+  _ModeSwitch({required this.mode, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0x08FFFFFF),
+        color: AstraColors.overlay,
         border: Border.all(color: AstraColors.line),
         borderRadius: BorderRadius.circular(11),
       ),
@@ -231,11 +234,11 @@ class _ModeSwitch extends StatelessWidget {
     return GestureDetector(
       onTap: () => onChanged(id),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        duration: Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
           gradient: active
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [Color(0xFF7DD3FC), Color(0xFFA5B4FC)],
                 )
               : null,
@@ -255,15 +258,15 @@ class _ModeSwitch extends StatelessWidget {
             Icon(
               icon,
               size: 14,
-              color: active ? const Color(0xFF071019) : AstraColors.muted,
+              color: active ? Color(0xFF071019) : AstraColors.muted,
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                color: active ? const Color(0xFF071019) : AstraColors.muted,
+                color: active ? Color(0xFF071019) : AstraColors.muted,
               ),
             ),
           ],
@@ -276,19 +279,19 @@ class _ModeSwitch extends StatelessWidget {
 class _EnvChip extends StatelessWidget {
   final AppState state;
 
-  const _EnvChip({required this.state});
+  _EnvChip({required this.state});
 
   @override
   Widget build(BuildContext context) {
     final active = state.env;
     final count = active.vars.where((item) => item.k.trim().isNotEmpty).length;
     return PopupMenuButton<String>(
-      tooltip: '切换 / 管理环境',
+      tooltip: 'Switch / manage environments',
       color: AstraColors.surface2,
-      offset: const Offset(0, 40),
+      offset: Offset(0, 40),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: AstraColors.line),
+        side: BorderSide(color: AstraColors.line),
       ),
       onSelected: (value) {
         if (value == '__manage') {
@@ -313,7 +316,7 @@ class _EnvChip extends StatelessWidget {
                       ? AstraColors.accent
                       : AstraColors.faint,
                 ),
-                const SizedBox(width: 9),
+                SizedBox(width: 9),
                 Expanded(
                   child: Text(
                     env.name,
@@ -326,37 +329,41 @@ class _EnvChip extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   '${env.vars.where((item) => item.k.trim().isNotEmpty).length}',
-                  style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                  style: TextStyle(fontSize: 10, color: AstraColors.faint),
                 ),
               ],
             ),
           ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
+        PopupMenuDivider(),
+        PopupMenuItem<String>(
           value: '__manage',
           height: 38,
           child: Row(
             children: [
               Icon(Icons.settings_outlined, size: 14, color: AstraColors.muted),
               SizedBox(width: 9),
-              Text(
-                '管理环境…',
-                style: TextStyle(fontSize: 12, color: AstraColors.muted),
+              Flexible(
+                child: Text(
+                  'Manage environments…',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: AstraColors.muted),
+                ),
               ),
             ],
           ),
         ),
       ],
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 210),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: BoxConstraints(maxWidth: 180),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           border: Border.all(color: AstraColors.line),
           borderRadius: BorderRadius.circular(99),
-          color: const Color(0x08FFFFFF),
+          color: AstraColors.overlay,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -377,23 +384,23 @@ class _EnvChip extends StatelessWidget {
                     : null,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Flexible(
               child: Text(
                 active.name,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AstraColors.muted),
+                style: TextStyle(fontSize: 12, color: AstraColors.muted),
               ),
             ),
             if (count > 0) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
                 '$count',
-                style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                style: TextStyle(fontSize: 10, color: AstraColors.faint),
               ),
             ],
-            const SizedBox(width: 4),
-            const Icon(Icons.expand_more, size: 14, color: AstraColors.faint),
+            SizedBox(width: 4),
+            Icon(Icons.expand_more, size: 14, color: AstraColors.faint),
           ],
         ),
       ),
@@ -407,7 +414,7 @@ class _IconAction extends StatelessWidget {
   final VoidCallback onTap;
   final int? badge;
 
-  const _IconAction({
+  _IconAction({
     required this.icon,
     required this.tooltip,
     required this.onTap,
@@ -422,7 +429,7 @@ class _IconAction extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: 7, vertical: 6),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -432,7 +439,7 @@ class _IconAction extends StatelessWidget {
                   top: -4,
                   right: -6,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3.5, vertical: 0.5),
+                    padding: EdgeInsets.symmetric(horizontal: 3.5, vertical: 0.5),
                     decoration: BoxDecoration(
                       color: AstraColors.accent,
                       borderRadius: BorderRadius.circular(99),

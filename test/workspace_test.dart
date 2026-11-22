@@ -32,7 +32,7 @@ void main() {
       state.duplicateEnv(source.id);
 
       final copy = state.env;
-      expect(copy.name, '开发 副本');
+      expect(copy.name, '开发 copy');
       expect(copy.vars.single.v, 'abc');
       copy.vars.first.v = 'changed';
       expect(state.environments.first.vars.first.v, 'abc');

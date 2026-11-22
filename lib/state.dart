@@ -99,6 +99,12 @@ class AppState extends ChangeNotifier {
   bool runningCollection = false;
   String runnerProgress = '';
   RunReport? lastReport;
+
+  /// 运行器实时结果，运行过程中逐条追加
+  final List<RunStepResult> runSteps = [];
+
+  /// 本轮运行开始时间（毫秒），0 表示尚未运行
+  int runStartedAt = 0;
   bool _stopRunner = false;
   final Map<String, Timer> _monitorTimers = {};
 
@@ -134,6 +140,29 @@ class AppState extends ChangeNotifier {
   bool sending = false;
   String? selectedId;
   String? toast;
+
+  /// 集合树中当前选中的节点，供 Rename / Duplicate / Delete 等快捷键使用。
+  /// kind 取值：group / folder / entry；空字符串表示没有选中树节点。
+  String selectedNodeKind = '';
+  String selectedNodeId = '';
+
+  void selectTreeNode(String kind, String id) {
+    selectedNodeKind = kind;
+    selectedNodeId = id;
+    notifyListeners();
+  }
+
+  CollectionGroup? get selectedGroupNode => selectedNodeKind == 'group'
+      ? groups.where((item) => item.id == selectedNodeId).firstOrNull
+      : null;
+
+  CollectionFolder? get selectedFolderNode => selectedNodeKind == 'folder'
+      ? folders.where((item) => item.id == selectedNodeId).firstOrNull
+      : null;
+
+  CollectionEntry? get selectedEntryNode => selectedNodeKind == 'entry'
+      ? collections.where((item) => item.id == selectedNodeId).firstOrNull
+      : null;
 
   /// 脚本执行结果（仅保留最近一次发送）
   bool scriptRan = false;
@@ -215,16 +244,16 @@ class AppState extends ChangeNotifier {
   /// 变量面板使用的完整来源列表（低 → 高优先级）。
   List<VariableScope> variableScopes() {
     final scopes = <VariableScope>[
-      VariableScope('全局', globals),
+      VariableScope('Globals', globals),
     ];
     for (final group in groups) {
-      scopes.add(VariableScope('集合 · ${group.name}', group.variables));
+      scopes.add(VariableScope('Collection · ${group.name}', group.variables));
     }
     for (final folder in folders) {
       final path = folderPath(folder.id);
-      scopes.add(VariableScope('文件夹 · $path', folder.variables));
+      scopes.add(VariableScope('Folder · $path', folder.variables));
     }
-    scopes.add(VariableScope('环境 · ${env.name}', env.vars));
+    scopes.add(VariableScope('Environment · ${env.name}', env.vars));
     return scopes;
   }
 
@@ -268,20 +297,20 @@ class AppState extends ChangeNotifier {
 
   /// 认证继承来源描述，供 UI 提示。
   String authSourceLabel(ApiRequest req) {
-    if (req.auth.type != 'inherit') return '当前请求';
+    if (req.auth.type != 'inherit') return 'This Request';
     var folder = folders.where((item) => item.id == _activeFolderId).firstOrNull;
     var guard = 0;
     while (folder != null && guard < 32) {
       final current = folder;
-      if (current.auth.type != 'inherit') return '文件夹 · ${current.name}';
+      if (current.auth.type != 'inherit') return 'Folder · ${current.name}';
       folder = current.parentId.isEmpty
           ? null
           : folders.where((item) => item.id == current.parentId).firstOrNull;
       guard += 1;
     }
     final group = groups.where((item) => item.id == _activeGroupId).firstOrNull;
-    if (group != null && group.auth.type != 'inherit') return '集合 · ${group.name}';
-    return '无';
+    if (group != null && group.auth.type != 'inherit') return 'Collection · ${group.name}';
+    return 'None';
   }
 
 
@@ -318,12 +347,12 @@ class AppState extends ChangeNotifier {
   String buildUrl([ApiRequest? req]) {
     final source = _source(req);
     var raw = resolve(source.url).trim();
-    if (raw.isEmpty) throw HttpFailure('请输入请求地址');
+    if (raw.isEmpty) throw HttpFailure('Enter a request URL');
     if (!RegExp(r'^[a-zA-Z][\w+.-]*://').hasMatch(raw)) {
       raw = 'http://$raw';
     }
     final uri = Uri.tryParse(raw);
-    if (uri == null || uri.host.isEmpty) throw HttpFailure('请求地址格式无效');
+    if (uri == null || uri.host.isEmpty) throw HttpFailure('Invalid request URL');
 
     final params = source.params
         .where((item) => item.on && item.k.trim().isNotEmpty)
@@ -367,7 +396,7 @@ class AppState extends ChangeNotifier {
           try {
             variables = jsonDecode(rawVars);
           } catch (_) {
-            throw HttpFailure('GraphQL Variables 不是合法 JSON');
+            throw HttpFailure('GraphQL variables are not valid JSON');
           }
         }
         return jsonEncode({'query': query, 'variables': variables});
@@ -383,7 +412,7 @@ class AppState extends ChangeNotifier {
     try {
       return encodeGrpcFrame(base64Decode(payload.replaceAll(RegExp(r'\s+'), '')));
     } catch (_) {
-      throw HttpFailure('gRPC 载荷不是合法 base64');
+      throw HttpFailure('gRPC payload is not valid base64');
     }
   }
 
@@ -518,7 +547,7 @@ class AppState extends ChangeNotifier {
     if (sseRunning) return;
     await stopSse();
     sseRunning = true;
-    sseStatus = '正在连接…';
+    sseStatus = 'Connecting…';
     sseLog.clear();
     sseCount = 0;
     notifyListeners();
@@ -542,7 +571,7 @@ class AppState extends ChangeNotifier {
         return;
       }
       _sseSession = session;
-      sseStatus = '已连接（HTTP ${session.status}），等待事件…';
+      sseStatus = 'Connected (HTTP ${session.status}), waiting for events…';
       _pushHistory(request.copy(), url, session.status, 0);
       session.events.listen(
         (event) {
@@ -552,13 +581,13 @@ class AppState extends ChangeNotifier {
           notifyListeners();
         },
         onError: (Object err) {
-          sseStatus = '连接错误：$err';
+          sseStatus = 'Connection error: $err';
           sseRunning = false;
           _sseSession = null;
           notifyListeners();
         },
         onDone: () {
-          sseStatus = '连接已结束';
+          sseStatus = 'Connection closed';
           sseRunning = false;
           _sseSession = null;
           notifyListeners();
@@ -580,7 +609,7 @@ class AppState extends ChangeNotifier {
     }
     if (sseRunning) {
       sseRunning = false;
-      sseStatus ??= '已停止';
+      sseStatus ??= 'Stopped';
       notifyListeners();
     }
   }
@@ -697,7 +726,7 @@ class AppState extends ChangeNotifier {
   /// 支持 client_credentials / password / authorization_code（含 PKCE）。
   Future<String?> fetchOAuthToken(ApiRequest target, {bool force = false}) async {
     final auth = target.auth;
-    if (auth.type != 'oauth2') return '请先把认证类型切换为 OAuth 2.0';
+    if (auth.type != 'oauth2') return 'Set the authorization type to OAuth 2.0 first';
     if (!force && auth.token.trim().isNotEmpty && !auth.oauthExpired) {
       return null;
     }
@@ -713,7 +742,7 @@ class AppState extends ChangeNotifier {
       return _applyOAuth(auth, result);
     }
     final tokenUrl = resolve(auth.oauthTokenUrl).trim();
-    if (tokenUrl.isEmpty) return '请先填写 Token 端点地址';
+    if (tokenUrl.isEmpty) return 'Enter the Token endpoint URL first';
     final result = await oauth.clientCredentials(
       tokenUrl: tokenUrl,
       clientId: resolve(auth.oauthClientId),
@@ -727,7 +756,7 @@ class AppState extends ChangeNotifier {
 
   String? _applyOAuth(AuthConfig auth, OAuthTokenResult result) {
     if (result.token == null || result.token!.isEmpty) {
-      return result.error ?? '获取 Token 失败';
+      return result.error ?? 'Failed to get token';
     }
     auth
       ..token = result.token!
@@ -775,12 +804,12 @@ class AppState extends ChangeNotifier {
   /// 解析 cURL 命令，返回新建的请求；解析失败抛出 FormatException。
   ApiRequest parseCurl(String input) {
     var text = input.trim();
-    if (text.isEmpty) throw const FormatException('请输入 cURL 命令');
+    if (text.isEmpty) throw const FormatException('Enter a cURL command');
     // 去掉复制时常见的行首提示符与换行续行
     text = text.replaceAll(RegExp(r'\\\r?\n'), ' ').replaceAll(RegExp(r'\r?\n'), ' ');
     final tokens = _tokenizeShell(text);
     if (tokens.isEmpty || !tokens.first.toLowerCase().contains('curl')) {
-      throw const FormatException('内容不是有效的 cURL 命令');
+      throw const FormatException('Content is not a valid cURL command');
     }
     final req = ApiRequest();
     final headers = <KV>[];
@@ -864,7 +893,7 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    if (url == null || url.trim().isEmpty) throw const FormatException('未找到请求地址');
+    if (url == null || url.trim().isEmpty) throw const FormatException('No request URL found');
     req.url = url;
     req.method = method ?? (data != null ? 'POST' : 'GET');
     if (headers.isEmpty) headers.add(KV());
@@ -950,7 +979,7 @@ class AppState extends ChangeNotifier {
       final last = uri.pathSegments.last;
       if (last.isNotEmpty) return last;
     }
-    return url.isEmpty ? '未命名请求' : url;
+    return url.isEmpty ? 'Untitled Request' : url;
   }
 
   /* ------------------------------------------------------------------ */
@@ -961,7 +990,7 @@ class AppState extends ChangeNotifier {
     if (wsState != 'idle') return;
     var url = resolve(ws.url).trim();
     if (url.isEmpty) {
-      _wsSystem('请输入 WebSocket 地址');
+      _wsSystem('Enter a WebSocket URL');
       return;
     }
     if (!RegExp(r'^wss?://', caseSensitive: false).hasMatch(url)) {
@@ -975,7 +1004,7 @@ class AppState extends ChangeNotifier {
     }
     wsState = 'connecting';
     wsError = null;
-    _wsSystem('正在连接 $url');
+    _wsSystem('Connecting to $url');
     notifyListeners();
     final startedAt = DateTime.now().millisecondsSinceEpoch;
     void pushWsHistory(int? status) {
@@ -1004,7 +1033,7 @@ class AppState extends ChangeNotifier {
         verify: ws.verify,
         onOpen: () {
           wsState = 'open';
-          _wsSystem('连接已建立');
+          _wsSystem('Connection established');
           pushWsHistory(101);
           notifyListeners();
           _schedulePersist();
@@ -1015,7 +1044,7 @@ class AppState extends ChangeNotifier {
             wsLog.add(WsMessage(data, time: DateTime.now()));
           } else if (data is List<int>) {
             wsLog.add(WsMessage(
-              '[二进制 ${data.length} 字节] ${utf8.decode(data, allowMalformed: true)}',
+              '[Binary ${data.length} bytes] ${utf8.decode(data, allowMalformed: true)}',
               time: DateTime.now(),
             ));
           } else {
@@ -1030,7 +1059,7 @@ class AppState extends ChangeNotifier {
         },
         onError: (message) {
           wsError = message;
-          _wsSystem('错误：$message');
+          _wsSystem('Error: $message');
           pushWsHistory(null);
           notifyListeners();
         },
@@ -1047,13 +1076,13 @@ class AppState extends ChangeNotifier {
   Future<void> disconnectWs() async {
     await wsService.close();
     wsState = 'idle';
-    _wsSystem('已断开连接');
+    _wsSystem('Disconnected');
     notifyListeners();
   }
 
   void sendWs(String text) {
     if (wsState != 'open') {
-      _wsSystem('尚未建立连接');
+      _wsSystem('Not connected');
       return;
     }
     try {
@@ -1062,7 +1091,7 @@ class AppState extends ChangeNotifier {
       wsLog.add(WsMessage(text, outgoing: true));
       notifyListeners();
     } catch (err) {
-      _wsSystem('发送失败：$err');
+      _wsSystem('Failed to send: $err');
       notifyListeners();
     }
   }
@@ -1117,7 +1146,7 @@ class AppState extends ChangeNotifier {
         ? _nameFromUrl(url)
         : current;
     saveCurrent(name);
-    showToast('已保存');
+    showToast('Saved');
   }
 
   void switchMode(String next) {
@@ -1145,7 +1174,7 @@ class AppState extends ChangeNotifier {
   }
 
   String _draftName(String targetMode) =>
-      targetMode == 'ws' ? '未命名连接' : '未命名 API';
+      targetMode == 'ws' ? 'Untitled Connection' : 'Untitled API';
 
   WorkspaceTab _createTab({
     required String name,
@@ -1190,6 +1219,15 @@ class AppState extends ChangeNotifier {
     _activateTab(tab);
     notifyListeners();
     _scheduleDraft();
+  }
+
+  /// Switches to the previous (-1) or next (+1) tab in the current mode.
+  void selectRelativeTab(int offset) {
+    final modeTabs = tabsFor(mode);
+    final index = modeTabs.indexWhere((item) => item.id == activeTabId);
+    final target = index + offset;
+    if (index < 0 || target < 0 || target >= modeTabs.length) return;
+    activateTab(modeTabs[target].id);
   }
 
   void closeTab(String id) {
@@ -1245,7 +1283,7 @@ class AppState extends ChangeNotifier {
     _clearScriptResult();
     notifyListeners();
     _scheduleDraft();
-    showToast('已在该位置新建${targetMode == 'ws' ? '连接' : ' API 请求'}，填写后按 ⌘ / Ctrl + S 保存');
+    showToast('New ${targetMode == 'ws' ? 'connection' : 'API request'} created here. Fill it in and press ⌘ / Ctrl + S to save');
   }
 
   /// 解析 cURL 并在当前 Session 新建一个请求标签页。
@@ -1261,7 +1299,7 @@ class AppState extends ChangeNotifier {
     pendingFolderId = '';
     notifyListeners();
     _scheduleDraft();
-    showToast('已从 cURL 创建请求');
+    showToast('Request created from cURL');
   }
 
   void openEntry(CollectionEntry entry) {
@@ -1330,7 +1368,7 @@ class AppState extends ChangeNotifier {
     }
     final entry = CollectionEntry(
       id: selectedId,
-      name: name.trim().isEmpty ? '未命名请求' : name.trim(),
+      name: name.trim().isEmpty ? 'Untitled Request' : name.trim(),
       mode: mode,
       groupId: targetGroup,
       folderId: targetFolder,
@@ -1416,7 +1454,7 @@ class AppState extends ChangeNotifier {
 
   CollectionGroup createGroup(String name, String targetMode) {
     final group = CollectionGroup(
-      name: name.trim().isEmpty ? '新建集合' : name.trim(),
+      name: name.trim().isEmpty ? 'New Collection' : name.trim(),
       mode: targetMode,
     );
     groups.add(group);
@@ -1506,7 +1544,7 @@ class AppState extends ChangeNotifier {
     final folder = CollectionFolder(
       groupId: groupId,
       parentId: parentId,
-      name: name.trim().isEmpty ? '新建文件夹' : name.trim(),
+      name: name.trim().isEmpty ? 'New Folder' : name.trim(),
     );
     folders.add(folder);
     if (parentId.isNotEmpty) {
@@ -1650,7 +1688,7 @@ class AppState extends ChangeNotifier {
     final source = collections.where((item) => item.id == id).firstOrNull;
     if (source == null) return null;
     final copy = CollectionEntry(
-      name: '${source.name} 副本',
+      name: '${source.name} copy',
       mode: source.mode,
       groupId: source.groupId,
       folderId: source.folderId,
@@ -1671,7 +1709,7 @@ class AppState extends ChangeNotifier {
     final copy = CollectionFolder(
       groupId: source.groupId,
       parentId: source.parentId,
-      name: '${source.name} 副本',
+      name: '${source.name} copy',
       description: source.description,
       variables: source.variables.map((item) => item.copy()).toList(),
       auth: source.auth.copy(),
@@ -1688,7 +1726,8 @@ class AppState extends ChangeNotifier {
         auth: child.auth.copy(),
       ));
     }
-    for (final entry in collections.where((item) => item.folderId == source.id)) {
+    for (final entry
+        in collections.where((item) => item.folderId == source.id).toList()) {
       collections.insert(
         0,
         CollectionEntry(
@@ -1712,7 +1751,7 @@ class AppState extends ChangeNotifier {
     final source = groups.where((item) => item.id == id).firstOrNull;
     if (source == null) return null;
     final group = CollectionGroup(
-      name: '${source.name} 副本',
+      name: '${source.name} copy',
       mode: source.mode,
       description: source.description,
       variables: source.variables.map((item) => item.copy()).toList(),
@@ -1720,7 +1759,8 @@ class AppState extends ChangeNotifier {
     );
     groups.add(group);
     final folderMap = <String, String>{};
-    for (final folder in folders.where((item) => item.groupId == id)) {
+    for (final folder
+        in folders.where((item) => item.groupId == id).toList()) {
       final copy = CollectionFolder(
         groupId: group.id,
         parentId: folderMap[folder.parentId] ?? '',
@@ -1732,7 +1772,8 @@ class AppState extends ChangeNotifier {
       folderMap[folder.id] = copy.id;
       folders.add(copy);
     }
-    for (final entry in collections.where((item) => item.groupId == id)) {
+    for (final entry
+        in collections.where((item) => item.groupId == id).toList()) {
       collections.insert(
         0,
         CollectionEntry(
@@ -1887,7 +1928,7 @@ class AppState extends ChangeNotifier {
   }
 
   Env createEnv(String name) {
-    final created = Env(name: name.trim().isEmpty ? '新环境' : name.trim());
+    final created = Env(name: name.trim().isEmpty ? 'New Environment' : name.trim());
     environments.add(created);
     activeEnvId = created.id;
     notifyListeners();
@@ -1900,7 +1941,7 @@ class AppState extends ChangeNotifier {
     if (source == null) return;
     final copy = source.copy()
       ..id = newId()
-      ..name = '${source.name} 副本';
+      ..name = '${source.name} copy';
     environments.add(copy);
     activeEnvId = copy.id;
     notifyListeners();
@@ -1935,44 +1976,51 @@ class AppState extends ChangeNotifier {
   /* ------------------------------------------------------------------ */
 
   /// 按集合结构深度优先展开要运行的 HTTP 请求。
-  List<CollectionEntry> runnerEntries(String groupId) {
+  List<CollectionEntry> runnerEntries(String groupId, {String folderId = ''}) {
     final result = <CollectionEntry>[];
     final seen = <String>{};
 
-    void walk(String folderId) {
-      final entries = folderId.isEmpty
+    void walk(String currentFolderId) {
+      final entries = currentFolderId.isEmpty
           ? entriesInGroupRoot(groupId)
-          : entriesInFolder(folderId);
+          : entriesInFolder(currentFolderId);
       for (final entry in entries) {
         if (entry.mode == 'http' && seen.add(entry.id)) result.add(entry);
       }
-      final children =
-          folderId.isEmpty ? rootFolders(groupId) : childFolders(folderId);
+      final children = currentFolderId.isEmpty
+          ? rootFolders(groupId)
+          : childFolders(currentFolderId);
       for (final child in children) {
         walk(child.id);
       }
     }
 
-    walk('');
-    for (final entry in entriesFor('http')) {
-      if (entry.groupId == groupId && seen.add(entry.id)) result.add(entry);
+    if (folderId.isEmpty) {
+      walk('');
+      for (final entry in entriesFor('http')) {
+        if (entry.groupId == groupId && seen.add(entry.id)) result.add(entry);
+      }
+    } else {
+      walk(folderId);
     }
     return result;
   }
 
   Future<RunReport> runCollection({
     required String groupId,
+    String folderId = '',
     int iterations = 1,
+    int delayMs = 0,
     List<Map<String, String>> dataRows = const [],
     bool stopOnError = false,
   }) async {
     if (runningCollection) {
-      throw HttpFailure('已有集合正在运行');
+      throw HttpFailure('A collection is already running');
     }
     final group = groups.where((item) => item.id == groupId).firstOrNull;
-    final entries = runnerEntries(groupId);
+    final entries = runnerEntries(groupId, folderId: folderId);
     if (entries.isEmpty) {
-      throw HttpFailure('该集合下没有可运行的 HTTP 请求');
+      throw HttpFailure('This collection has no HTTP requests to run');
     }
     final startedAt = DateTime.now();
     final stopwatch = Stopwatch()..start();
@@ -1985,7 +2033,9 @@ class AppState extends ChangeNotifier {
 
     runningCollection = true;
     _stopRunner = false;
-    runnerProgress = '准备运行';
+    runSteps.clear();
+    runStartedAt = DateTime.now().millisecondsSinceEpoch;
+    runnerProgress = 'Preparing to run';
     notifyListeners();
 
     try {
@@ -2000,12 +2050,18 @@ class AppState extends ChangeNotifier {
         final limit = entries.length * 4;
         while (index >= 0 && index < entries.length && guard < limit) {
           if (_stopRunner) break;
+          if (delayMs > 0 && steps.isNotEmpty) {
+            await Future<void>.delayed(Duration(milliseconds: delayMs));
+            if (_stopRunner) break;
+          }
           final entry = entries[index];
           runnerProgress =
-              '第 ${round + 1}/$rounds 轮 · ${index + 1}/${entries.length} ${entry.name}';
+              'Iteration ${round + 1}/$rounds · ${index + 1}/${entries.length} ${entry.name}';
           notifyListeners();
           final result = await _runEntryHeadless(entry, round + 1, data);
           steps.add(result);
+          runSteps.add(result);
+          notifyListeners();
           var nextIndex = index + 1;
           final next = scriptNextRequest;
           scriptNextRequest = null;
@@ -2037,13 +2093,13 @@ class AppState extends ChangeNotifier {
     }
 
     final report = RunReport(
-      collectionName: group?.name ?? '集合',
+      collectionName: group?.name ?? 'Collection',
       startedAt: startedAt,
       durationMs: stopwatch.elapsedMilliseconds,
       iterations: iterations <= 0 ? 1 : iterations,
       steps: steps,
       cancelled: _stopRunner,
-      dataSource: dataRows.isEmpty ? null : '数据文件 ${dataRows.length} 行',
+      dataSource: dataRows.isEmpty ? null : 'Data file (${dataRows.length} rows)',
     );
     lastReport = report;
     notifyListeners();
@@ -2054,7 +2110,7 @@ class AppState extends ChangeNotifier {
   void stopRunner() {
     if (!runningCollection) return;
     _stopRunner = true;
-    runnerProgress = '正在停止…';
+    runnerProgress = 'Stopping…';
     notifyListeners();
   }
 
@@ -2075,6 +2131,8 @@ class AppState extends ChangeNotifier {
     String body = '';
     String? error;
     final failures = <String>[];
+    var testPassed = 0;
+    var testTotal = 0;
 
     try {
       await _refreshOAuthIfNeeded(work);
@@ -2096,7 +2154,9 @@ class AppState extends ChangeNotifier {
           event: 'prerequest',
         ),
       );
-      _applyHeadlessOutcome(pre, work, failures, prerequest: true);
+      final preCounts = _applyHeadlessOutcome(pre, work, failures, prerequest: true);
+      testPassed += preCounts.$1;
+      testTotal += preCounts.$2;
 
       url = buildUrl(work);
       final headers = collectHeaders(work);
@@ -2139,7 +2199,9 @@ class AppState extends ChangeNotifier {
         ),
         response: result,
       );
-      _applyHeadlessOutcome(post, work, failures, prerequest: false);
+      final postCounts = _applyHeadlessOutcome(post, work, failures, prerequest: false);
+      testPassed += postCounts.$1;
+      testTotal += postCounts.$2;
     } catch (err) {
       error = err is HttpFailure ? err.message : '$err';
     }
@@ -2155,22 +2217,27 @@ class AppState extends ChangeNotifier {
       failures: failures,
       error: error,
       body: body,
+      testPassed: testPassed,
+      testTotal: testTotal,
     );
   }
 
-  void _applyHeadlessOutcome(
+  (int, int) _applyHeadlessOutcome(
     ScriptOutcome? outcome,
     ApiRequest work,
     List<String> failures, {
     required bool prerequest,
   }) {
-    if (outcome == null) return;
+    if (outcome == null) return (0, 0);
+    var passed = 0;
     if (outcome.error != null && outcome.error!.isNotEmpty) {
-      failures.add('脚本错误：${outcome.error}');
+      failures.add('Script error: ${outcome.error}');
     }
     for (final test in outcome.tests) {
-      if (!test.passed) {
-        failures.add(test.error == null ? '断言失败：${test.name}' : '${test.name}：${test.error}');
+      if (test.passed) {
+        passed += 1;
+      } else {
+        failures.add(test.error == null ? 'Assertion failed: ${test.name}' : '${test.name}: ${test.error}');
       }
     }
     if (outcome.nextRequest != null && outcome.nextRequest!.isNotEmpty) {
@@ -2187,20 +2254,22 @@ class AppState extends ChangeNotifier {
           .map((entry) => KV(k: entry.key, v: entry.value))
           .toList();
     }
-    if (!prerequest) return;
-    if (outcome.method.trim().isNotEmpty) {
-      work.method = outcome.method.trim().toUpperCase();
+    if (prerequest) {
+      if (outcome.method.trim().isNotEmpty) {
+        work.method = outcome.method.trim().toUpperCase();
+      }
+      if (outcome.url.trim().isNotEmpty) work.url = outcome.url;
+      if (outcome.headers.isNotEmpty) {
+        work.headers = outcome.headers
+            .map((header) => KV(on: !header.disabled, k: header.key, v: header.value))
+            .toList();
+      }
+      work.bodyMode = _normalizeBodyMode(outcome.bodyMode, outcome.body);
+      if (work.bodyMode == 'json' || work.bodyMode == 'text') {
+        work.body = outcome.body;
+      }
     }
-    if (outcome.url.trim().isNotEmpty) work.url = outcome.url;
-    if (outcome.headers.isNotEmpty) {
-      work.headers = outcome.headers
-          .map((header) => KV(on: !header.disabled, k: header.key, v: header.value))
-          .toList();
-    }
-    work.bodyMode = _normalizeBodyMode(outcome.bodyMode, outcome.body);
-    if (work.bodyMode == 'json' || work.bodyMode == 'text') {
-      work.body = outcome.body;
-    }
+    return (passed, outcome.tests.length);
   }
 
   void _applyContentType(ApiRequest work, Map<String, String> headers) {
@@ -2236,7 +2305,7 @@ class AppState extends ChangeNotifier {
 
   MonitorConfig addMonitor({
     required String groupId,
-    String name = '定时监控',
+    String name = 'Scheduled Monitor',
     int intervalMinutes = 30,
     int iterations = 1,
   }) {
@@ -2280,7 +2349,7 @@ class AppState extends ChangeNotifier {
         ..lastRunAt = DateTime.now().millisecondsSinceEpoch
         ..lastPassed = report.passed
         ..lastTotal = report.total
-        ..lastError = report.failed > 0 ? '${report.failed} 个请求未通过' : '';
+        ..lastError = report.failed > 0 ? '${report.failed} request(s) failed' : '';
     } catch (err) {
       monitor
         ..lastRunAt = DateTime.now().millisecondsSinceEpoch
@@ -2333,7 +2402,7 @@ class AppState extends ChangeNotifier {
   String importData(dynamic data) {
     final kind = detectKind(data);
     if (kind == 'unknown' || data is! Map) {
-      throw const FormatException('无法识别的文件格式，支持 Postman、OpenAPI 3、Swagger 2 和 Astra 导出文件');
+      throw const FormatException('Unrecognized file format. Supported formats: Postman, OpenAPI 3, Swagger 2 and Astra export');
     }
     if (kind == 'astra') {
       return _importAstra(Map<String, dynamic>.from(data));
@@ -2360,7 +2429,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _schedulePersist();
     final label = kind == 'postman' ? 'Postman' : 'OpenAPI';
-    return '已从 $label 导入 ${result.collections.length} 个请求，合并 $merged 个变量';
+    return 'Imported ${result.collections.length} requests from $label, merged $merged variables';
   }
 
   String _importAstra(Map<String, dynamic> data) {
@@ -2451,7 +2520,7 @@ class AppState extends ChangeNotifier {
     _schedulePersist();
     final groupCount = rawGroups is List ? rawGroups.length : 0;
     final envCount = rawEnvs is List ? rawEnvs.length : 0;
-    return '已从 Astra 备份导入 $count 个请求、$groupCount 个集合、$envCount 个环境';
+    return 'Imported $count requests, $groupCount collections, $envCount environments from Astra backup';
   }
 
   /* ------------------------------------------------------------------ */

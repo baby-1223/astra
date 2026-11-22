@@ -14,16 +14,16 @@ Widget _shell({
 }) {
   return Dialog(
     backgroundColor: Colors.transparent,
-    insetPadding: const EdgeInsets.all(32),
+    insetPadding: EdgeInsets.all(32),
     child: Container(
       width: width,
-      constraints: const BoxConstraints(maxHeight: 660),
-      padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+      constraints: BoxConstraints(maxHeight: 660),
+      padding: EdgeInsets.fromLTRB(22, 20, 22, 18),
       decoration: BoxDecoration(
         color: AstraColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AstraColors.line),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(color: Color(0x8C000000), blurRadius: 60, offset: Offset(0, 24)),
         ],
       ),
@@ -33,18 +33,18 @@ Widget _shell({
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 5),
+            SizedBox(height: 5),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 11.5, color: AstraColors.muted, height: 1.6),
+              style: TextStyle(fontSize: 11.5, color: AstraColors.muted, height: 1.6),
             ),
           ],
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Flexible(child: child),
-          const SizedBox(height: 18),
+          SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: actions,
@@ -64,8 +64,9 @@ Future<void> showEnvManagerDialog(BuildContext context, AppState state) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => _shell(
-        title: '环境管理',
-        subtitle: '为开发 / 测试 / 生产分别维护变量集合，请求中使用 {{变量名}} 引用当前环境的值。',
+        title: 'Environment Manager',
+        subtitle: 'Keep separate variable sets for Development / Staging / Production. '
+            'Use {{variable}} in requests to reference the active environment.',
         width: 700,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -94,12 +95,13 @@ Future<void> showEnvManagerDialog(BuildContext context, AppState state) async {
                         onDelete: () async {
                           final ok = await showConfirmDialog(
                             ctx,
-                            title: '删除环境',
-                            message: '确定删除环境「${env.name}」及其变量吗？此操作不可撤销。',
+                            title: 'Delete Environment',
+                            message: 'Delete environment "${env.name}" and its variables? '
+                                'This cannot be undone.',
                           );
                           if (!ok) return;
                           if (!state.deleteEnv(env.id)) {
-                            state.showToast('至少需要保留一个环境');
+                            state.showToast('At least one environment is required');
                           }
                           setLocal(() {});
                         },
@@ -108,11 +110,11 @@ Future<void> showEnvManagerDialog(BuildContext context, AppState state) async {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Align(
               alignment: Alignment.centerLeft,
               child: GhostButton(
-                label: '新建环境',
+                label: 'New Environment',
                 icon: Icons.add,
                 onPressed: () async {
                   await showEnvDialog(ctx, state);
@@ -124,7 +126,7 @@ Future<void> showEnvManagerDialog(BuildContext context, AppState state) async {
         ),
         actions: [
           GradientButton(
-            label: '完成',
+            label: 'Done',
             onPressed: () => Navigator.of(ctx).pop(),
           ),
         ],
@@ -141,7 +143,7 @@ class _EnvRow extends StatelessWidget {
   final VoidCallback onDuplicate;
   final VoidCallback onDelete;
 
-  const _EnvRow({
+  _EnvRow({
     required this.env,
     required this.active,
     required this.onSwitch,
@@ -154,12 +156,12 @@ class _EnvRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = env.vars.where((item) => item.k.trim().isNotEmpty).length;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: active ? const Color(0x1238BDF8) : const Color(0x08FFFFFF),
+        color: active ? AstraColors.accentSoft : AstraColors.overlay,
         border: Border.all(
-          color: active ? const Color(0x3338BDF8) : AstraColors.line,
+          color: active ? AstraColors.accentBorder : AstraColors.line,
         ),
         borderRadius: BorderRadius.circular(10),
       ),
@@ -170,7 +172,7 @@ class _EnvRow extends StatelessWidget {
             size: 15,
             color: active ? AstraColors.accent : AstraColors.faint,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,29 +183,29 @@ class _EnvRow extends StatelessWidget {
                       child: Text(
                         env.name,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12.5, color: AstraColors.text),
+                        style: TextStyle(fontSize: 12.5, color: AstraColors.text),
                       ),
                     ),
                     if (active) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: const Color(0x2638BDF8),
+                          color: AstraColors.accentSoft,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          '当前',
+                        child: Text(
+                          'Active',
                           style: TextStyle(fontSize: 9, color: AstraColors.accent),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
-                  '$count 个变量',
-                  style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                  '$count variables',
+                  style: TextStyle(fontSize: 10, color: AstraColors.faint),
                 ),
               ],
             ),
@@ -213,30 +215,30 @@ class _EnvRow extends StatelessWidget {
               onPressed: onSwitch,
               style: TextButton.styleFrom(
                 foregroundColor: AstraColors.accent,
-                textStyle: const TextStyle(fontSize: 11),
+                textStyle: TextStyle(fontSize: 11),
               ),
-              child: const Text('切换'),
+              child: Text('Switch'),
             ),
           IconButton(
-            tooltip: '编辑变量',
+            tooltip: 'Edit variables',
             onPressed: onEdit,
             iconSize: 15,
             color: AstraColors.muted,
-            icon: const Icon(Icons.edit_outlined),
+            icon: Icon(Icons.edit_outlined),
           ),
           IconButton(
-            tooltip: '复制环境',
+            tooltip: 'Duplicate environment',
             onPressed: onDuplicate,
             iconSize: 15,
             color: AstraColors.muted,
-            icon: const Icon(Icons.copy_all_outlined),
+            icon: Icon(Icons.copy_all_outlined),
           ),
           IconButton(
-            tooltip: '删除环境',
+            tooltip: 'Delete environment',
             onPressed: onDelete,
             iconSize: 15,
             color: AstraColors.faint,
-            icon: const Icon(Icons.delete_outline),
+            icon: Icon(Icons.delete_outline),
           ),
         ],
       ),
@@ -248,7 +250,7 @@ Future<void> showEnvDialog(BuildContext context, AppState state, {String? envId}
   final existing = envId == null
       ? null
       : state.environments.where((item) => item.id == envId).firstOrNull;
-  final nameController = TextEditingController(text: existing?.name ?? '新环境');
+  final nameController = TextEditingController(text: existing?.name ?? 'New Environment');
   final vars = (existing?.vars ?? [KV()]).map((item) => item.copy()).toList();
   if (vars.isEmpty) vars.add(KV());
 
@@ -256,8 +258,9 @@ Future<void> showEnvDialog(BuildContext context, AppState state, {String? envId}
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => _shell(
-        title: existing == null ? '新建环境' : '编辑环境',
-        subtitle: '在请求中使用 {{变量名}} 引用；发送前会自动替换为当前环境的值。',
+        title: existing == null ? 'New Environment' : 'Edit Environment',
+        subtitle: 'Reference values with {{variable}} in requests; they are resolved '
+            'to the active environment before sending.',
         width: 620,
         child: SingleChildScrollView(
           child: Column(
@@ -265,15 +268,15 @@ Future<void> showEnvDialog(BuildContext context, AppState state, {String? envId}
             children: [
               TextField(
                 controller: nameController,
-                style: const TextStyle(fontSize: 12.5),
-                decoration: astraInput(hint: '环境名称，例如 开发 / 测试 / 生产'),
+                style: TextStyle(fontSize: 12.5),
+                decoration: astraInput(hint: 'Environment name, e.g. Development / Staging / Production'),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               KVEditor(
                 rows: vars,
                 onChanged: () {},
-                keyHint: '变量名',
-                valueHint: '变量值',
+                keyHint: 'Variable name',
+                valueHint: 'Value',
                 onAdd: () => setLocal(() => vars.add(KV())),
                 onRemove: (index) => setLocal(() => vars.removeAt(index)),
               ),
@@ -282,12 +285,12 @@ Future<void> showEnvDialog(BuildContext context, AppState state, {String? envId}
         ),
         actions: [
           GhostButton(
-            label: '取消',
+            label: 'Cancel',
             onPressed: () => Navigator.of(ctx).pop(false),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           GradientButton(
-            label: '保存',
+            label: 'Save',
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
         ],
@@ -300,10 +303,10 @@ Future<void> showEnvDialog(BuildContext context, AppState state, {String? envId}
         .where((item) => item.k.trim().isNotEmpty)
         .map((item) => KV(on: item.on, k: item.k.trim(), v: item.v))
         .toList();
-    final name = nameController.text.trim().isEmpty ? '环境' : nameController.text.trim();
+    final name = nameController.text.trim().isEmpty ? 'Environment' : nameController.text.trim();
     final targetId = existing?.id ?? state.createEnv(name).id;
     state.updateEnvById(targetId, name, cleaned.isEmpty ? [KV()] : cleaned);
-    state.showToast('环境「$name」已保存');
+    state.showToast('Environment "$name" saved');
   }
   nameController.dispose();
 }
@@ -317,30 +320,31 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => _shell(
-        title: 'Cookie 管理',
-        subtitle: '响应中的 Set-Cookie 会自动写入，并在请求时按域与路径匹配携带。',
+        title: 'Cookie Manager',
+        subtitle: 'Set-Cookie response headers are stored automatically and sent back '
+            'when the domain and path match.',
         width: 780,
         child: state.cookies.isEmpty
-            ? const Padding(
+            ? Padding(
                 padding: EdgeInsets.symmetric(vertical: 26),
                 child: EmptyHint(
                   icon: Icons.cookie_outlined,
-                  title: '暂无 Cookie',
-                  subtitle: '发送携带 Set-Cookie 的请求后会自动出现在这里',
+                  title: 'No cookies yet',
+                  subtitle: 'Cookies appear here after sending a request that returns Set-Cookie',
                 ),
               )
             : SingleChildScrollView(
                 child: Column(
                   children: [
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(bottom: 6, left: 6, right: 6),
                       child: Row(
                         children: [
-                          Expanded(flex: 2, child: _Th('名称')),
-                          Expanded(flex: 3, child: _Th('值')),
-                          Expanded(flex: 2, child: _Th('域')),
-                          Expanded(flex: 2, child: _Th('路径')),
-                          Expanded(flex: 2, child: _Th('过期')),
+                          Expanded(flex: 2, child: _Th('Name')),
+                          Expanded(flex: 3, child: _Th('Value')),
+                          Expanded(flex: 2, child: _Th('Domain')),
+                          Expanded(flex: 2, child: _Th('Path')),
+                          Expanded(flex: 2, child: _Th('Expires')),
                           SizedBox(width: 36),
                         ],
                       ),
@@ -348,8 +352,8 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
                     ...List.generate(state.cookies.length, (index) {
                       final cookie = state.cookies[index];
                       return Container(
-                        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
-                        decoration: const BoxDecoration(
+                        padding: EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+                        decoration: BoxDecoration(
                           border: Border(bottom: BorderSide(color: AstraColors.line)),
                         ),
                         child: Row(
@@ -390,7 +394,7 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
                               flex: 2,
                               child: Text(
                                 cookie.expires == 0
-                                    ? '会话'
+                                    ? 'Session'
                                     : DateTime.fromMillisecondsSinceEpoch(cookie.expires)
                                         .toString()
                                         .substring(0, 16),
@@ -401,12 +405,12 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
                             SizedBox(
                               width: 36,
                               child: IconButton(
-                                tooltip: '删除',
+                                tooltip: 'Delete',
                                 onPressed: () {
                                   state.deleteCookie(index);
                                   setLocal(() {});
                                 },
-                                icon: const Icon(Icons.close, size: 15),
+                                icon: Icon(Icons.close, size: 15),
                                 color: AstraColors.faint,
                               ),
                             ),
@@ -419,7 +423,7 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
               ),
         actions: [
           GhostButton(
-            label: '清空全部',
+            label: 'Clear All',
             onPressed: state.cookies.isEmpty
                 ? null
                 : () {
@@ -427,9 +431,9 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
                     setLocal(() {});
                   },
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           GradientButton(
-            label: '完成',
+            label: 'Done',
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
         ],
@@ -440,12 +444,12 @@ Future<void> showCookieDialog(BuildContext context, AppState state) async {
 
 class _Th extends StatelessWidget {
   final String text;
-  const _Th(this.text);
+  _Th(this.text);
 
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: const TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
+        style: TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
       );
 }
 
@@ -458,7 +462,7 @@ class SaveRequestResult {
   final String groupId;
   final String folderId;
 
-  const SaveRequestResult(this.name, this.groupId, this.folderId);
+  SaveRequestResult(this.name, this.groupId, this.folderId);
 }
 
 Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) async {
@@ -471,8 +475,8 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
   }
   final fallback = existing?.name ??
       (state.mode == 'ws'
-          ? (state.ws.url.isEmpty ? '未命名 WebSocket' : state.ws.url)
-          : (state.request.url.isEmpty ? '未命名请求' : state.request.url));
+          ? (state.ws.url.isEmpty ? 'Untitled WebSocket' : state.ws.url)
+          : (state.request.url.isEmpty ? 'Untitled Request' : state.request.url));
   final controller = TextEditingController(text: fallback);
   var groupId = existing?.groupId ?? state.pendingGroupId;
   var folderId = existing?.folderId ?? state.pendingFolderId;
@@ -492,10 +496,11 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
           folderId = '';
         }
         return _shell(
-          title: existing == null ? '保存到集合' : '更新集合中的请求',
+          title: existing == null ? 'Save to Collection' : 'Update Request in Collection',
           subtitle: state.mode == 'ws'
-              ? 'WebSocket 连接会按集合 / 文件夹归档，下次可从侧栏一键载入。'
-              : '选择请求归属的集合与文件夹，便于按业务模块归档。',
+              ? 'WebSocket connections are organized by collection / folder and can be '
+                  'loaded from the sidebar anytime.'
+              : 'Choose the collection and folder for this request to keep things organized.',
           width: 500,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -503,20 +508,20 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
               TextField(
                 controller: controller,
                 autofocus: true,
-                style: const TextStyle(fontSize: 12.5),
-                decoration: astraInput(hint: '名称'),
+                style: TextStyle(fontSize: 12.5),
+                decoration: astraInput(hint: 'Name'),
                 onSubmitted: (value) =>
                     Navigator.of(ctx).pop(SaveRequestResult(value, groupId, folderId)),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _selectBox(
                       value: groupId,
-                      hint: '未分组',
+                      hint: 'Ungrouped',
                       items: [
-                        const DropdownMenuItem(value: '', child: Text('未分组')),
+                        DropdownMenuItem(value: '', child: Text('Ungrouped')),
                         ...options.map(
                           (group) => DropdownMenuItem(
                             value: group.id,
@@ -530,14 +535,14 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
                       }),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   GhostButton(
-                    label: '新建集合',
+                    label: 'New Collection',
                     icon: Icons.create_new_folder_outlined,
                     onPressed: () async {
                       final name = await showGroupDialog(
                         ctx,
-                        title: '新建集合',
+                        title: 'New Collection',
                         initial: '',
                         mode: state.mode,
                       );
@@ -552,15 +557,15 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
                 ],
               ),
               if (groupId.isNotEmpty) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: _selectBox(
                         value: folderId,
-                        hint: '集合根目录',
+                        hint: 'Collection root',
                         items: [
-                          const DropdownMenuItem(value: '', child: Text('集合根目录')),
+                          DropdownMenuItem(value: '', child: Text('Collection root')),
                           ...folderOptions.map(
                             (folder) => DropdownMenuItem(
                               value: folder.id,
@@ -574,14 +579,14 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
                         onChanged: (value) => setLocal(() => folderId = value ?? ''),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     GhostButton(
-                      label: '新建文件夹',
+                      label: 'New Folder',
                       icon: Icons.create_new_folder_outlined,
                       onPressed: () async {
                         final name = await showGroupDialog(
                           ctx,
-                          title: '新建文件夹',
+                          title: 'New Folder',
                           initial: '',
                           mode: state.mode,
                         );
@@ -596,10 +601,10 @@ Future<SaveRequestResult?> showSaveDialog(BuildContext context, AppState state) 
             ],
           ),
           actions: [
-            GhostButton(label: '取消', onPressed: () => Navigator.of(ctx).pop()),
-            const SizedBox(width: 10),
+            GhostButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop()),
+            SizedBox(width: 10),
             GradientButton(
-              label: '保存',
+              label: 'Save',
               onPressed: () => Navigator.of(ctx).pop(
                 SaveRequestResult(controller.text, groupId, folderId),
               ),
@@ -621,9 +626,9 @@ Widget _selectBox({
 }) {
   return Container(
     height: 40,
-    padding: const EdgeInsets.symmetric(horizontal: 10),
+    padding: EdgeInsets.symmetric(horizontal: 10),
     decoration: BoxDecoration(
-      color: const Color(0xFF0B0F17),
+      color: AstraColors.inset,
       border: Border.all(color: AstraColors.line),
       borderRadius: BorderRadius.circular(9),
     ),
@@ -632,10 +637,10 @@ Widget _selectBox({
         value: value,
         isExpanded: true,
         dropdownColor: AstraColors.surface2,
-        style: const TextStyle(fontSize: 12, color: AstraColors.text),
+        style: TextStyle(fontSize: 12, color: AstraColors.text),
         hint: Text(
           hint,
-          style: const TextStyle(fontSize: 12, color: AstraColors.faint),
+          style: TextStyle(fontSize: 12, color: AstraColors.faint),
         ),
         items: items,
         onChanged: onChanged,
@@ -655,20 +660,20 @@ Future<String?> showGroupDialog(
     context: context,
     builder: (ctx) => _shell(
       title: title,
-      subtitle: mode == 'ws' ? 'WebSocket 连接集合' : 'HTTP 请求集合',
+      subtitle: mode == 'ws' ? 'WebSocket connection collections' : 'HTTP request collections',
       width: 440,
       child: TextField(
         controller: controller,
         autofocus: true,
-        style: const TextStyle(fontSize: 12.5),
-        decoration: astraInput(hint: '集合名称'),
+        style: TextStyle(fontSize: 12.5),
+        decoration: astraInput(hint: 'Collection name'),
         onSubmitted: (value) => Navigator.of(ctx).pop(value),
       ),
       actions: [
-        GhostButton(label: '取消', onPressed: () => Navigator.of(ctx).pop()),
-        const SizedBox(width: 10),
+        GhostButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop()),
+        SizedBox(width: 10),
         GradientButton(
-          label: '确定',
+          label: 'OK',
           onPressed: () => Navigator.of(ctx).pop(controller.text),
         ),
       ],
@@ -686,36 +691,37 @@ Future<String?> showExportDialog(BuildContext context) {
   return showDialog<String>(
     context: context,
     builder: (ctx) => _shell(
-      title: '导出工作区',
-      subtitle: '选择导出格式，随后选择保存位置。',
+      title: 'Export Workspace',
+      subtitle: 'Choose a format, then pick where to save the file.',
       width: 560,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _ExportOption(
             icon: Icons.auto_awesome_outlined,
-            title: 'Astra 备份（推荐）',
-            description: '完整保存环境变量、集合与 Cookie，可在 Astra 中再次导入。',
+            title: 'Astra Backup (Recommended)',
+            description: 'Includes environments, collections and cookies. '
+                'Can be imported back into Astra.',
             onTap: () => Navigator.of(ctx).pop('astra'),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _ExportOption(
             icon: Icons.swap_horiz_rounded,
             title: 'Postman Collection v2.1',
-            description: '导出为 Postman 集合文件，便于与其他工具交换。',
+            description: 'Export as a Postman collection file to share with other tools.',
             onTap: () => Navigator.of(ctx).pop('postman'),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _ExportOption(
             icon: Icons.description_outlined,
             title: 'OpenAPI 3.0',
-            description: '根据请求自动生成 OpenAPI 文档，可直接用于接口文档站。',
+            description: 'Generate OpenAPI docs from your requests, ready for API documentation sites.',
             onTap: () => Navigator.of(ctx).pop('openapi'),
           ),
         ],
       ),
       actions: [
-        GhostButton(label: '取消', onPressed: () => Navigator.of(ctx).pop()),
+        GhostButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop()),
       ],
     ),
   );
@@ -727,7 +733,7 @@ class _ExportOption extends StatefulWidget {
   final String description;
   final VoidCallback onTap;
 
-  const _ExportOption({
+  _ExportOption({
     required this.icon,
     required this.title,
     required this.description,
@@ -750,10 +756,10 @@ class _ExportOptionState extends State<_ExportOption> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.all(13),
+          duration: Duration(milliseconds: 140),
+          padding: EdgeInsets.all(13),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0x0F38BDF8) : const Color(0x08FFFFFF),
+            color: _hover ? AstraColors.accentSoft : AstraColors.overlay,
             border: Border.all(color: _hover ? AstraColors.lineStrong : AstraColors.line),
             borderRadius: BorderRadius.circular(11),
           ),
@@ -773,24 +779,24 @@ class _ExportOptionState extends State<_ExportOption> {
                 ),
                 child: Icon(widget.icon, size: 17, color: AstraColors.accent),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.title,
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     Text(
                       widget.description,
-                      style: const TextStyle(fontSize: 11, color: AstraColors.muted, height: 1.5),
+                      style: TextStyle(fontSize: 11, color: AstraColors.muted, height: 1.5),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 18, color: AstraColors.faint),
+              Icon(Icons.chevron_right, size: 18, color: AstraColors.faint),
             ],
           ),
         ),
@@ -807,7 +813,7 @@ Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String message,
-  String confirmLabel = '删除',
+  String confirmLabel = 'Delete',
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -816,11 +822,11 @@ Future<bool> showConfirmDialog(
       width: 420,
       child: Text(
         message,
-        style: const TextStyle(fontSize: 12.5, color: AstraColors.muted, height: 1.7),
+        style: TextStyle(fontSize: 12.5, color: AstraColors.muted, height: 1.7),
       ),
       actions: [
-        GhostButton(label: '取消', onPressed: () => Navigator.of(ctx).pop(false)),
-        const SizedBox(width: 10),
+        GhostButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop(false)),
+        SizedBox(width: 10),
         GradientButton(
           label: confirmLabel,
           danger: true,
@@ -851,17 +857,17 @@ Future<void> showMessageDialog(
             size: 18,
             color: error ? AstraColors.err : AstraColors.accent,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(fontSize: 12.5, color: AstraColors.muted, height: 1.7),
+              style: TextStyle(fontSize: 12.5, color: AstraColors.muted, height: 1.7),
             ),
           ),
         ],
       ),
       actions: [
-        GradientButton(label: '知道了', onPressed: () => Navigator.of(ctx).pop()),
+        GradientButton(label: 'Got it', onPressed: () => Navigator.of(ctx).pop()),
       ],
     ),
   );
@@ -879,8 +885,9 @@ Future<void> showCurlImportDialog(BuildContext context, AppState state) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => _shell(
-        title: '从 cURL 导入',
-        subtitle: '粘贴浏览器「Copy as cURL」或任意 cURL 命令，Astra 会解析出地址、方法、Header、认证与 Body。',
+        title: 'Import from cURL',
+        subtitle: 'Paste a "Copy as cURL" command from the browser or any cURL command. '
+            'Astra will parse the URL, method, headers, authorization and body.',
         width: 680,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -893,29 +900,29 @@ Future<void> showCurlImportDialog(BuildContext context, AppState state) async {
               style: monoStyle(size: 11.5, height: 1.5),
               decoration: astraInput(
                 hint: "curl -X POST 'https://api.demo.com/users' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"astra\"}'",
-                contentPadding: const EdgeInsets.all(11),
+                contentPadding: EdgeInsets.all(11),
               ),
             ),
             if (error != null) ...[
-              const SizedBox(height: 10),
-              Text(error!, style: const TextStyle(fontSize: 11.5, color: AstraColors.err)),
+              SizedBox(height: 10),
+              Text(error!, style: TextStyle(fontSize: 11.5, color: AstraColors.err)),
             ],
           ],
         ),
         actions: [
           GhostButton(
-            label: '取消',
+            label: 'Cancel',
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             onPressed: () => Navigator.of(ctx).pop(),
           ),
           const SizedBox(width: 8),
           GradientButton(
-            label: '导入',
+            label: 'Import',
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
             onPressed: () {
               final text = controller.text.trim();
               if (text.isEmpty) {
-                setLocal(() => error = '请先粘贴 cURL 命令');
+                setLocal(() => error = 'Paste a cURL command first');
                 return;
               }
               try {
@@ -924,7 +931,7 @@ Future<void> showCurlImportDialog(BuildContext context, AppState state) async {
                 setLocal(() => error = err.message);
                 return;
               } catch (err) {
-                setLocal(() => error = '解析失败：$err');
+                setLocal(() => error = 'Failed to parse: $err');
                 return;
               }
               Navigator.of(ctx).pop(text);
@@ -939,7 +946,7 @@ Future<void> showCurlImportDialog(BuildContext context, AppState state) async {
   try {
     state.openCurl(source);
   } catch (err) {
-    state.showToast('导入失败：$err');
+    state.showToast('Import failed: $err');
   }
 }
 

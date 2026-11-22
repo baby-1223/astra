@@ -15,7 +15,7 @@ import 'script_editor.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-const List<String> _commonHeaders = [
+List<String> _commonHeaders = [
   'Accept',
   'Accept-Charset',
   'Accept-Encoding',
@@ -50,7 +50,7 @@ const List<String> _commonHeaders = [
 class HttpView extends StatefulWidget {
   final AppState state;
 
-  const HttpView({super.key, required this.state});
+  HttpView({super.key, required this.state});
 
   @override
   State<HttpView> createState() => _HttpViewState();
@@ -78,11 +78,11 @@ class _HttpViewState extends State<HttpView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: CallbackShortcuts(
         bindings: {
-          const SingleActivator(LogicalKeyboardKey.enter, meta: true): () => state.send(),
-          const SingleActivator(LogicalKeyboardKey.enter, control: true): () => state.send(),
+          SingleActivator(LogicalKeyboardKey.enter, meta: true): () => state.send(),
+          SingleActivator(LogicalKeyboardKey.enter, control: true): () => state.send(),
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -135,29 +135,29 @@ class _HttpViewState extends State<HttpView> {
   Widget _requestCard() {
     final req = state.request;
     return AstraCard(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      padding: EdgeInsets.fromLTRB(14, 14, 14, 10),
       child: Column(
         children: [
           Row(
             children: [
-              const Icon(Icons.edit_outlined, size: 14, color: AstraColors.faint),
-              const SizedBox(width: 8),
+              Icon(Icons.edit_outlined, size: 14, color: AstraColors.faint),
+              SizedBox(width: 8),
               SizedBox(
                 width: 340,
                 height: 40,
                 child: KeyedSubtree(
-                  key: const ValueKey('active-name'),
+                  key: ValueKey('active-name'),
                   child: BoundTextField(
                     value: state.activeName,
-                    hint: 'API 名称',
+                    hint: 'API name',
                     fontSize: 13,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     onChanged: state.renameActive,
                     onSubmitted: (_) => state.saveActive(),
                   ),
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               PopupMenuButton<String>(
                 tooltip: 'cURL',
                 padding: EdgeInsets.zero,
@@ -167,20 +167,20 @@ class _HttpViewState extends State<HttpView> {
                     await showCurlImportDialog(context, state);
                   } else {
                     await Clipboard.setData(ClipboardData(text: state.curlFor(state.request)));
-                    state.showToast('cURL 已复制到剪贴板');
+                    state.showToast('cURL copied to clipboard');
                   }
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'import', height: 38, child: Text('从 cURL 导入')),
-                  PopupMenuItem(value: 'export', height: 38, child: Text('复制为 cURL')),
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: 'import', height: 38, child: Text('Import from cURL')),
+                  PopupMenuItem(value: 'export', height: 38, child: Text('Copy as cURL')),
                 ],
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     border: Border.all(color: AstraColors.line),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(Icons.terminal_rounded, size: 12, color: AstraColors.muted),
                       SizedBox(width: 5),
@@ -189,30 +189,30 @@ class _HttpViewState extends State<HttpView> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _iconAction(
                 icon: Icons.visibility_outlined,
-                tooltip: '预览最终请求',
+                tooltip: 'Preview final request',
                 onPressed: () => showRequestPreviewDialog(context, state),
               ),
               _iconAction(
                 icon: Icons.data_object,
-                tooltip: '变量面板',
+                tooltip: 'Variables panel',
                 onPressed: () => showVariablesDialog(context, state),
               ),
               _iconAction(
                 icon: Icons.playlist_play,
-                tooltip: '集合运行器',
+                tooltip: 'Collection runner',
                 onPressed: () => showRunnerDialog(context, state),
               ),
-              const SizedBox(width: 4),
-              const Text(
-                '⌘ / Ctrl + S 保存',
+              SizedBox(width: 4),
+              Text(
+                '⌘ / Ctrl + S to save',
                 style: TextStyle(fontSize: 10, color: AstraColors.faint),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -223,16 +223,16 @@ class _HttpViewState extends State<HttpView> {
                   state.touch();
                 },
               ),
-              const SizedBox(width: 9),
+              SizedBox(width: 9),
               Expanded(
                 child: SizedBox(
                   height: 42,
                   child: BoundTextField(
                     value: req.url,
-                    hint: 'https://api.example.com/users 或 {{baseUrl}}/users',
+                    hint: 'https://api.example.com/users or {{baseUrl}}/users',
                     fontSize: 13,
                     varNames: state.varNames,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 13, vertical: 11),
                     onChanged: (value) {
                       req.url = value;
                       state.touch();
@@ -240,16 +240,16 @@ class _HttpViewState extends State<HttpView> {
                   ),
                 ),
               ),
-              const SizedBox(width: 9),
+              SizedBox(width: 9),
               GradientButton(
-                label: state.sending ? '发送中' : '发送',
+                label: state.sending ? 'Sending' : 'Send',
                 icon: state.sending ? null : Icons.send_rounded,
                 onPressed: state.sending ? null : state.send,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 13),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -258,32 +258,32 @@ class _HttpViewState extends State<HttpView> {
                   onSelect: (id) => setState(() => _reqTab = id),
                   items: [
                     AstraTabItem('params',
-                        '参数', count: req.params.where((e) => e.on && e.k.isNotEmpty).length),
+                        'Params', count: req.params.where((e) => e.on && e.k.isNotEmpty).length),
                     AstraTabItem('headers',
-                        '请求头', count: req.headers.where((e) => e.on && e.k.isNotEmpty).length),
+                        'Headers', count: req.headers.where((e) => e.on && e.k.isNotEmpty).length),
                     AstraTabItem('body',
-                        '请求体${req.bodyMode == 'none' ? '' : ' · ${_bodyLabel(req.bodyMode)}'}'),
+                        'Body${req.bodyMode == 'none' ? '' : ' · ${_bodyLabel(req.bodyMode)}'}'),
                     AstraTabItem('auth',
-                        req.auth.type == 'none' ? '认证' : '认证 · ${_authLabel(req.auth.type)}'),
-                    const AstraTabItem('scripts', '脚本'),
-                    const AstraTabItem('options', '选项'),
+                        req.auth.type == 'none' ? 'Authorization' : 'Authorization · ${_authLabel(req.auth.type)}'),
+                    AstraTabItem('scripts', 'Scripts'),
+                    AstraTabItem('options', 'Options'),
                   ],
                 ),
               ),
               if (req.method == 'GET' || req.method == 'HEAD')
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: EdgeInsets.only(right: 8),
                   child: Text(
-                    '${req.method} 请求不携带 Body',
-                    style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                    '${req.method} requests have no body',
+                    style: TextStyle(fontSize: 10, color: AstraColors.faint),
                   ),
                 ),
             ],
           ),
-          const Divider(height: 1, color: AstraColors.line),
+          Divider(height: 1, color: AstraColors.line),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 12, bottom: 4),
+              padding: EdgeInsets.only(top: 12, bottom: 4),
               child: _requestTabContent(),
             ),
           ),
@@ -297,11 +297,11 @@ class _HttpViewState extends State<HttpView> {
       case 'json':
         return 'JSON';
       case 'text':
-        return '文本';
+        return 'Text';
       case 'form':
-        return '表单';
+        return 'Form';
       case 'form-data':
-        return '多部分表单';
+        return 'Multipart form';
       case 'graphql':
         return 'GraphQL';
       case 'grpc':
@@ -321,7 +321,7 @@ class _HttpViewState extends State<HttpView> {
       case 'oauth2':
         return 'OAuth 2.0';
       case 'inherit':
-        return '继承';
+        return 'Inherited';
     }
     return type;
   }
@@ -332,13 +332,13 @@ class _HttpViewState extends State<HttpView> {
       case 'headers':
         return KVEditor(
           rows: req.headers,
-          keyHint: 'Header 名称',
-          valueHint: 'Header 值（支持 {{变量}}）',
+          keyHint: 'Header name',
+          valueHint: 'Header value (supports {{variables}})',
           varNames: state.varNames,
           keySuggestions: _commonHeaders,
           onBulkEdit: () => showBulkEditDialog(
             context,
-            title: '批量编辑请求头',
+            title: 'Bulk edit headers',
             rows: req.headers,
           ),
           onChanged: state.touch,
@@ -356,12 +356,12 @@ class _HttpViewState extends State<HttpView> {
       default:
         return KVEditor(
           rows: req.params,
-          keyHint: 'Query 参数',
-          valueHint: '值（支持 {{变量}}）',
+          keyHint: 'Query param',
+          valueHint: 'Value (supports {{variables}})',
           varNames: state.varNames,
           onBulkEdit: () => showBulkEditDialog(
             context,
-            title: '批量编辑查询参数',
+            title: 'Bulk edit query params',
             rows: req.params,
           ),
           onChanged: state.touch,
@@ -373,10 +373,10 @@ class _HttpViewState extends State<HttpView> {
 
   Widget _bodyEditor(ApiRequest req) {
     const modes = [
-      ['none', '无'],
+      ['none', 'None'],
       ['json', 'JSON'],
-      ['text', '文本'],
-      ['form', '表单'],
+      ['text', 'Text'],
+      ['form', 'Form'],
       ['form-data', 'Multipart'],
       ['graphql', 'GraphQL'],
       ['grpc', 'gRPC'],
@@ -387,9 +387,9 @@ class _HttpViewState extends State<HttpView> {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(3),
+              padding: EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: const Color(0x08FFFFFF),
+                color: AstraColors.overlay,
                 border: Border.all(color: AstraColors.line),
                 borderRadius: BorderRadius.circular(9),
               ),
@@ -402,13 +402,13 @@ class _HttpViewState extends State<HttpView> {
                       state.touch();
                     },
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+                      duration: Duration(milliseconds: 150),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
                       decoration: BoxDecoration(
-                        color: active ? const Color(0x1F38BDF8) : Colors.transparent,
+                        color: active ? AstraColors.accentSoft : Colors.transparent,
                         borderRadius: BorderRadius.circular(7),
                         border: Border.all(
-                          color: active ? const Color(0x4038BDF8) : Colors.transparent,
+                          color: active ? AstraColors.accentBorder : Colors.transparent,
                         ),
                       ),
                       child: Text(
@@ -424,47 +424,47 @@ class _HttpViewState extends State<HttpView> {
                 }).toList(),
               ),
             ),
-            const Spacer(),
+            Spacer(),
             if (req.bodyMode == 'json')
               TextButton.icon(
                 onPressed: () {
                   try {
                     final pretty =
-                        const JsonEncoder.withIndent('  ').convert(jsonDecode(req.body));
+                        JsonEncoder.withIndent('  ').convert(jsonDecode(req.body));
                     setState(() => req.body = pretty);
                     state.touch();
                   } catch (_) {
-                    state.showToast('JSON 格式无效，无法格式化');
+                    state.showToast('Invalid JSON, cannot format');
                   }
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: AstraColors.muted,
-                  textStyle: const TextStyle(fontSize: 11),
+                  textStyle: TextStyle(fontSize: 11),
                 ),
-                icon: const Icon(Icons.auto_fix_high, size: 13),
-                label: const Text('格式化 JSON'),
+                icon: Icon(Icons.auto_fix_high, size: 13),
+                label: Text('Format JSON'),
               ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         if (req.bodyMode == 'none')
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 22),
             child: Text(
-              '该请求不携带 Body',
+              'This request has no body',
               style: TextStyle(fontSize: 12, color: AstraColors.faint),
             ),
           )
         else if (req.bodyMode == 'json' || req.bodyMode == 'text')
           BoundTextField(
             value: req.body,
-            hint: req.bodyMode == 'json' ? '{\n  "name": "Astra"\n}' : '纯文本内容',
+            hint: req.bodyMode == 'json' ? '{\n  "name": "Astra"\n}' : 'Plain text content',
             minLines: 8,
             maxLines: 16,
             fontSize: 12,
             lineHeight: 1.55,
             varNames: state.varNames,
-            contentPadding: const EdgeInsets.all(12),
+            contentPadding: EdgeInsets.all(12),
             onChanged: (value) {
               req.body = value;
               state.touch();
@@ -473,12 +473,12 @@ class _HttpViewState extends State<HttpView> {
         else if (req.bodyMode == 'form')
           KVEditor(
             rows: req.form,
-            keyHint: '字段名',
-            valueHint: '字段值（支持 {{变量}}）',
+            keyHint: 'Field name',
+            valueHint: 'Field value (supports {{variables}})',
             varNames: state.varNames,
             onBulkEdit: () => showBulkEditDialog(
               context,
-              title: '批量编辑表单字段',
+              title: 'Bulk edit form fields',
               rows: req.form,
             ),
             onChanged: state.touch,
@@ -489,8 +489,8 @@ class _HttpViewState extends State<HttpView> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionLabel('Query', hint: '支持 {{变量}}，发送时会自动转成 GraphQL 请求'),
-              const SizedBox(height: 8),
+              SectionLabel('Query', hint: 'Supports {{variables}}; sent as a GraphQL request automatically'),
+              SizedBox(height: 8),
               BoundTextField(
                 value: req.graphqlQuery,
                 hint: 'query Users(\$limit: Int) {\n  users(limit: \$limit) { id name }\n}',
@@ -499,15 +499,15 @@ class _HttpViewState extends State<HttpView> {
                 fontSize: 12,
                 lineHeight: 1.55,
                 varNames: state.varNames,
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: EdgeInsets.all(12),
                 onChanged: (value) {
                   req.graphqlQuery = value;
                   state.touch();
                 },
               ),
-              const SizedBox(height: 12),
-              const SectionLabel('Variables', hint: 'JSON 对象，例如 {"limit": 10}'),
-              const SizedBox(height: 8),
+              SizedBox(height: 12),
+              SectionLabel('Variables', hint: 'JSON object, e.g. {"limit": 10}'),
+              SizedBox(height: 8),
               BoundTextField(
                 value: req.graphqlVars,
                 hint: '{\n  "limit": 10\n}',
@@ -516,7 +516,7 @@ class _HttpViewState extends State<HttpView> {
                 fontSize: 12,
                 lineHeight: 1.55,
                 varNames: state.varNames,
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: EdgeInsets.all(12),
                 onChanged: (value) {
                   req.graphqlVars = value;
                   state.touch();
@@ -529,10 +529,10 @@ class _HttpViewState extends State<HttpView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _miniSegments(
-                label: '载荷类型',
-                options: const [
+                label: 'Payload type',
+                options: [
                   ['binary', 'Base64 Protobuf'],
-                  ['json', 'JSON 文本'],
+                  ['json', 'JSON text'],
                 ],
                 value: req.grpcBinary ? 'binary' : 'json',
                 onSelect: (value) {
@@ -540,27 +540,28 @@ class _HttpViewState extends State<HttpView> {
                   state.touch();
                 },
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               BoundTextField(
                 value: req.grpcPayload,
                 hint: req.grpcBinary
-                    ? '粘贴 base64 编码的 protobuf 消息'
+                    ? 'Paste a base64-encoded protobuf message'
                     : '{"message": "hello"}',
                 minLines: 6,
                 maxLines: 12,
                 fontSize: 12,
                 lineHeight: 1.55,
                 varNames: state.varNames,
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: EdgeInsets.all(12),
                 onChanged: (value) {
                   req.grpcPayload = value;
                   state.touch();
                 },
               ),
-              const SizedBox(height: 8),
-              const Text(
-                '以 gRPC-Web 帧（5 字节头 + 载荷）发送到上方地址，响应会按帧解析展示。'
-                '适用于 Envoy / grpc-web 代理后的服务。',
+              SizedBox(height: 8),
+              Text(
+                'Sends gRPC-Web frames (5-byte header + payload) to the URL above; '
+                'responses are parsed frame by frame. Intended for services behind an '
+                'Envoy / grpc-web proxy.',
                 style: TextStyle(fontSize: 10.5, color: AstraColors.faint, height: 1.6),
               ),
             ],
@@ -579,8 +580,8 @@ class _HttpViewState extends State<HttpView> {
 
   Widget _authEditor(ApiRequest req) {
     const types = [
-      ['inherit', '继承上级'],
-      ['none', '无认证'],
+      ['inherit', 'Inherit from parent'],
+      ['none', 'No authorization'],
       ['bearer', 'Bearer Token'],
       ['basic', 'Basic Auth'],
       ['apikey', 'API Key'],
@@ -601,11 +602,11 @@ class _HttpViewState extends State<HttpView> {
                 state.touch();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0x1F38BDF8) : const Color(0x08FFFFFF),
+                  color: active ? AstraColors.accentSoft : AstraColors.overlay,
                   border: Border.all(
-                    color: active ? const Color(0x4038BDF8) : AstraColors.line,
+                    color: active ? AstraColors.accentBorder : AstraColors.line,
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -621,23 +622,23 @@ class _HttpViewState extends State<HttpView> {
           }).toList(),
         ),
         if (req.auth.type == 'inherit') ...[
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            padding: EdgeInsets.symmetric(horizontal: 11, vertical: 9),
             decoration: BoxDecoration(
-              color: const Color(0x0F38BDF8),
-              border: Border.all(color: const Color(0x2938BDF8)),
+              color: AstraColors.accentSoft,
+              border: Border.all(color: AstraColors.accentBorder),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                const Icon(Icons.link, size: 14, color: AstraColors.accent),
-                const SizedBox(width: 8),
+                Icon(Icons.link, size: 14, color: AstraColors.accent),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '当前使用${state.authSourceLabel(req)}的认证配置'
-                    '${inherited.type == 'none' ? '（未配置）' : ' · ${_authLabel(inherited.type)}'}',
-                    style: const TextStyle(
+                    'Using the authorization from ${state.authSourceLabel(req)}'
+                    '${inherited.type == 'none' ? ' (not configured)' : ' · ${_authLabel(inherited.type)}'}',
+                    style: TextStyle(
                       fontSize: 11,
                       color: AstraColors.muted,
                       height: 1.5,
@@ -648,16 +649,16 @@ class _HttpViewState extends State<HttpView> {
                   onPressed: () => showVariablesDialog(context, state),
                   style: TextButton.styleFrom(
                     foregroundColor: AstraColors.accent,
-                    textStyle: const TextStyle(fontSize: 10.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: TextStyle(fontSize: 10.5),
+                    padding: EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  child: const Text('管理集合变量'),
+                  child: Text('Manage collection variables'),
                 ),
               ],
             ),
           ),
         ],
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         ..._authFields(req),
       ],
     );
@@ -669,7 +670,7 @@ class _HttpViewState extends State<HttpView> {
         return [
           BoundTextField(
             value: req.auth.token,
-            hint: 'Token（支持 {{token}}）',
+            hint: 'Token (supports {{token}})',
             onChanged: (value) {
               req.auth.token = value;
               state.touch();
@@ -683,18 +684,18 @@ class _HttpViewState extends State<HttpView> {
               Expanded(
                 child: BoundTextField(
                   value: req.auth.username,
-                  hint: '用户名',
+                  hint: 'Username',
                   onChanged: (value) {
                     req.auth.username = value;
                     state.touch();
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: BoundTextField(
                   value: req.auth.password,
-                  hint: '密码',
+                  hint: 'Password',
                   obscure: true,
                   onChanged: (value) {
                     req.auth.password = value;
@@ -712,18 +713,18 @@ class _HttpViewState extends State<HttpView> {
               Expanded(
                 child: BoundTextField(
                   value: req.auth.apiKeyName,
-                  hint: 'Key 名称，如 X-API-Key',
+                  hint: 'Key name, e.g. X-API-Key',
                   onChanged: (value) {
                     req.auth.apiKeyName = value;
                     state.touch();
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: BoundTextField(
                   value: req.auth.apiKeyValue,
-                  hint: 'Key 值（支持 {{变量}}）',
+                  hint: 'Key value (supports {{variables}})',
                   onChanged: (value) {
                     req.auth.apiKeyValue = value;
                     state.touch();
@@ -732,10 +733,10 @@ class _HttpViewState extends State<HttpView> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _miniSegments(
-            label: '添加到',
-            options: const [['header', 'Header'], ['query', 'Query 参数']],
+            label: 'Add to',
+            options: [['header', 'Header'], ['query', 'Query param']],
             value: req.auth.apiKeyIn,
             onSelect: (value) {
               setState(() => req.auth.apiKeyIn = value);
@@ -746,10 +747,10 @@ class _HttpViewState extends State<HttpView> {
       case 'oauth2':
         return _oauthFields(req);
       case 'inherit':
-        return const [];
+        return [];
       default:
-        return const [
-          Text('未启用认证', style: TextStyle(fontSize: 12, color: AstraColors.faint)),
+        return [
+          Text('Authorization disabled', style: TextStyle(fontSize: 12, color: AstraColors.faint)),
         ];
     }
   }
@@ -758,11 +759,11 @@ class _HttpViewState extends State<HttpView> {
     final auth = req.auth;
     return [
       _miniSegments(
-        label: '授权类型',
-        options: const [
+        label: 'Grant type',
+        options: [
           ['client_credentials', 'Client Credentials'],
           ['password', 'Password'],
-          ['authorization_code', '授权码 + PKCE'],
+          ['authorization_code', 'Authorization code + PKCE'],
         ],
         value: auth.oauthGrantType,
         onSelect: (value) {
@@ -771,17 +772,17 @@ class _HttpViewState extends State<HttpView> {
         },
       ),
       if (auth.oauthGrantType == 'authorization_code') ...[
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         BoundTextField(
           value: auth.oauthAuthUrl,
-          hint: 'Authorization 端点，如 https://demo.com/oauth/authorize',
+          hint: 'Authorization endpoint, e.g. https://demo.com/oauth/authorize',
           varNames: state.varNames,
           onChanged: (value) {
             auth.oauthAuthUrl = value;
             state.touch();
           },
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Row(
           children: [
             Checkbox(
@@ -793,26 +794,26 @@ class _HttpViewState extends State<HttpView> {
                 state.touch();
               },
             ),
-            const Text('使用 PKCE（S256）', style: TextStyle(fontSize: 11, color: AstraColors.muted)),
-            const SizedBox(width: 12),
-            const Text(
-              '回调地址 http://127.0.0.1:8765/callback',
+            Text('Use PKCE (S256)', style: TextStyle(fontSize: 11, color: AstraColors.muted)),
+            SizedBox(width: 12),
+            Text(
+              'Callback http://127.0.0.1:8765/callback',
               style: TextStyle(fontSize: 10, color: AstraColors.faint),
             ),
           ],
         ),
       ],
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       BoundTextField(
         value: auth.oauthTokenUrl,
-        hint: 'Token 端点，如 https://api.demo.com/oauth/token',
+        hint: 'Token endpoint, e.g. https://api.demo.com/oauth/token',
         varNames: state.varNames,
         onChanged: (value) {
           auth.oauthTokenUrl = value;
           state.touch();
         },
       ),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       Row(
         children: [
           Expanded(
@@ -825,7 +826,7 @@ class _HttpViewState extends State<HttpView> {
               },
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: BoundTextField(
               value: auth.oauthClientSecret,
@@ -840,24 +841,24 @@ class _HttpViewState extends State<HttpView> {
         ],
       ),
       if (auth.oauthGrantType == 'password') ...[
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: BoundTextField(
                 value: auth.username,
-                hint: '用户名',
+                hint: 'Username',
                 onChanged: (value) {
                   auth.username = value;
                   state.touch();
                 },
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: BoundTextField(
                 value: auth.password,
-                hint: '密码',
+                hint: 'Password',
                 obscure: true,
                 onChanged: (value) {
                   auth.password = value;
@@ -868,22 +869,22 @@ class _HttpViewState extends State<HttpView> {
           ],
         ),
       ],
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       BoundTextField(
         value: auth.oauthScope,
-        hint: 'Scope（可选，空格分隔）',
+        hint: 'Scope (optional, space-separated)',
         onChanged: (value) {
           auth.oauthScope = value;
           state.touch();
         },
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       Row(
         children: [
           GhostButton(
-            label: _oauthBusy ? '获取中…' : '获取 Token',
+            label: _oauthBusy ? 'Fetching…' : 'Get token',
             icon: Icons.vpn_key_outlined,
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 13, vertical: 8),
             onPressed: _oauthBusy
                 ? null
                 : () async {
@@ -891,18 +892,18 @@ class _HttpViewState extends State<HttpView> {
                     final error = await state.fetchOAuthToken(req);
                     if (!mounted) return;
                     setState(() => _oauthBusy = false);
-                    state.showToast(error ?? '已获取 access_token');
+                    state.showToast(error ?? 'access_token obtained');
                   },
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   auth.token.isEmpty
-                      ? '尚未获取 Token，发送请求前请先获取或手动填写'
-                      : '已获取：${_maskToken(auth.token)}',
+                      ? 'No token yet. Fetch one or enter it manually before sending.'
+                      : 'Obtained: ${_maskToken(auth.token)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -912,9 +913,9 @@ class _HttpViewState extends State<HttpView> {
                 ),
                 if (auth.oauthExpiresAt > 0)
                   Text(
-                    '${auth.oauthExpired ? '已过期' : '有效期至'} '
+                    '${auth.oauthExpired ? 'Expired' : 'Expires at'} '
                     '${_timeText(auth.oauthExpiresAt)}'
-                    '${auth.oauthRefreshToken.isEmpty ? '' : ' · 支持自动刷新'}',
+                    '${auth.oauthRefreshToken.isEmpty ? '' : ' · Auto-refresh enabled'}',
                     style: TextStyle(
                       fontSize: 9.5,
                       color: auth.oauthExpired ? AstraColors.warn : AstraColors.faint,
@@ -932,13 +933,13 @@ class _HttpViewState extends State<HttpView> {
                       final error = await state.fetchOAuthToken(req, force: true);
                       if (!mounted) return;
                       setState(() => _oauthBusy = false);
-                      state.showToast(error ?? '已获取 access_token');
+                      state.showToast(error ?? 'access_token obtained');
                     },
               style: TextButton.styleFrom(
                 foregroundColor: AstraColors.muted,
-                textStyle: const TextStyle(fontSize: 10.5),
+                textStyle: TextStyle(fontSize: 10.5),
               ),
-              child: const Text('强制刷新'),
+              child: Text('Force refresh'),
             ),
         ],
       ),
@@ -966,19 +967,19 @@ class _HttpViewState extends State<HttpView> {
       children: [
         SizedBox(
           width: 64,
-          child: Text(label, style: const TextStyle(fontSize: 11.5, color: AstraColors.muted)),
+          child: Text(label, style: TextStyle(fontSize: 11.5, color: AstraColors.muted)),
         ),
         ...options.map((option) {
           final active = value == option[0];
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () => onSelect(option[0]),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0x1F38BDF8) : const Color(0x08FFFFFF),
-                  border: Border.all(color: active ? const Color(0x4038BDF8) : AstraColors.line),
+                  color: active ? AstraColors.accentSoft : AstraColors.overlay,
+                  border: Border.all(color: active ? AstraColors.accentBorder : AstraColors.line),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
@@ -1010,7 +1011,7 @@ class _HttpViewState extends State<HttpView> {
           Row(
             children: [
               SectionLabel(title),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Wrap(
                   spacing: 6,
@@ -1025,14 +1026,14 @@ class _HttpViewState extends State<HttpView> {
                         setState(() {});
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           border: Border.all(color: AstraColors.line),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           '+ ${template[0]}',
-                          style: const TextStyle(fontSize: 10.5, color: AstraColors.muted),
+                          style: TextStyle(fontSize: 10.5, color: AstraColors.muted),
                         ),
                       ),
                     );
@@ -1052,14 +1053,14 @@ class _HttpViewState extends State<HttpView> {
     }
 
     const preTemplates = [
-      ['时间戳', 'pm.environment.set("ts", Date.now());'],
-      ['随机数', 'pm.environment.set("nonce", Math.random().toString(36).slice(2));'],
-      ['加 Header', 'pm.request.headers.add({ key: "X-Debug", value: "1" });'],
+      ['Timestamp', 'pm.environment.set("ts", Date.now());'],
+      ['Random', 'pm.environment.set("nonce", Math.random().toString(36).slice(2));'],
+      ['Add header', 'pm.request.headers.add({ key: "X-Debug", value: "1" });'],
     ];
     const postTemplates = [
-      ['断言 200', 'pm.test("状态码 200", () => pm.response.to.have.status(200));'],
-      ['断言 JSON', 'pm.test("返回 JSON", () => {\n  pm.expect(pm.response.json()).to.be.an("object");\n});'],
-      ['保存变量',
+      ['Assert 200', 'pm.test("status is 200", () => pm.response.to.have.status(200));'],
+      ['Assert JSON', 'pm.test("returns JSON", () => {\n  pm.expect(pm.response.json()).to.be.an("object");\n});'],
+      ['Save variable',
         'const data = pm.response.json();\npm.environment.set("token", data.token || "");'],
     ];
 
@@ -1067,29 +1068,29 @@ class _HttpViewState extends State<HttpView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0x0F38BDF8),
-            border: Border.all(color: const Color(0x2938BDF8)),
+            color: AstraColors.accentSoft,
+            border: Border.all(color: AstraColors.accentBorder),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.bolt_outlined, size: 14, color: AstraColors.accent),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '脚本在本地 JavaScript 引擎中执行，可使用 pm.environment / pm.variables / pm.request / pm.response / pm.test / console.log，运行结果在响应区的「脚本」标签中查看。',
+                  'Scripts run in a local JavaScript engine with pm.environment / pm.variables / pm.request / pm.response / pm.test / console.log. Results appear in the Scripts tab of the response area.',
                   style: TextStyle(fontSize: 10.5, color: AstraColors.muted, height: 1.5),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         editor(
-          '前置脚本',
-          '// 发送前执行，例如：\n// pm.environment.set("ts", Date.now());\n// pm.request.headers.add({ key: "X-Debug", value: "1" });',
+          'Pre-request script',
+          '// Runs before sending, e.g.:\n// pm.environment.set("ts", Date.now());\n// pm.request.headers.add({ key: "X-Debug", value: "1" });',
           req.preScript,
           (value) {
             req.preScript = value;
@@ -1098,10 +1099,10 @@ class _HttpViewState extends State<HttpView> {
           },
           templates: preTemplates,
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         editor(
-          '后置脚本',
-          '// 响应返回后执行，例如：\n// pm.test("状态码 200", () => pm.response.to.have.status(200));\n// console.log(pm.response.json());',
+          'Post-response script',
+          '// Runs after the response returns, e.g.:\n// pm.test("status is 200", () => pm.response.to.have.status(200));\n// console.log(pm.response.json());',
           req.postScript,
           (value) {
             req.postScript = value;
@@ -1117,16 +1118,16 @@ class _HttpViewState extends State<HttpView> {
   Widget _optionsEditor(ApiRequest req) {
     Widget toggle(String title, String desc, bool value, ValueChanged<bool> onChanged) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
+        padding: EdgeInsets.only(bottom: 6),
         child: Row(
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 12.5)),
-                  const SizedBox(height: 2),
-                  Text(desc, style: const TextStyle(fontSize: 10.5, color: AstraColors.faint)),
+                  Text(title, style: TextStyle(fontSize: 12.5)),
+                  SizedBox(height: 2),
+                  Text(desc, style: TextStyle(fontSize: 10.5, color: AstraColors.faint)),
                 ],
               ),
             ),
@@ -1145,51 +1146,51 @@ class _HttpViewState extends State<HttpView> {
 
     return Column(
       children: [
-        toggle('自动跟随重定向', '跟随 3xx 响应，最多由底层客户端处理', req.options.followRedirects,
+        toggle('Follow redirects', 'Follow 3xx responses; handled by the underlying client', req.options.followRedirects,
             (value) => req.options.followRedirects = value),
-        toggle('校验 TLS 证书', '关闭后可访问自签名证书的测试服务', req.options.rejectUnauthorized,
+        toggle('Verify TLS certificate', 'Turn off to access test servers with self-signed certificates', req.options.rejectUnauthorized,
             (value) => req.options.rejectUnauthorized = value),
-        toggle('自动管理 Cookie', '保存响应中的 Set-Cookie 并在后续请求中携带', req.options.manageCookies,
+        toggle('Manage cookies automatically', 'Store Set-Cookie from responses and send it with later requests', req.options.manageCookies,
             (value) => req.options.manageCookies = value),
-        toggle('以事件流接收', '按 SSE 逐条接收 text/event-stream 响应，而不是等待完整响应',
+        toggle('Stream events', 'Receive text/event-stream responses event by event instead of waiting for the full response',
             req.options.streamSse, (value) => req.options.streamSse = value),
         Padding(
-          padding: const EdgeInsets.only(top: 2, bottom: 10),
+          padding: EdgeInsets.only(top: 2, bottom: 10),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('代理与客户端证书', style: TextStyle(fontSize: 12.5)),
+                    Text('Proxy and client certificates', style: TextStyle(fontSize: 12.5)),
                     SizedBox(height: 2),
-                    Text('HTTP / SOCKS5 代理、mTLS 双向证书，作用于所有请求',
+                    Text('HTTP / SOCKS5 proxy and mTLS certificates, applied to all requests',
                         style: TextStyle(fontSize: 10.5, color: AstraColors.faint)),
                   ],
                 ),
               ),
               GhostButton(
                 label: state.settings.proxyEnabled || state.settings.hasClientCert
-                    ? '已配置'
-                    : '配置',
+                    ? 'Configured'
+                    : 'Configure',
                 icon: Icons.lan_outlined,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 onPressed: () => showNetworkSettingsDialog(context, state),
               ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: EdgeInsets.only(top: 4),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('超时时间', style: TextStyle(fontSize: 12.5)),
+                    Text('Timeout', style: TextStyle(fontSize: 12.5)),
                     SizedBox(height: 2),
-                    Text('单位秒，0 表示不限制', style: TextStyle(fontSize: 10.5, color: AstraColors.faint)),
+                    Text('In seconds; 0 means no limit', style: TextStyle(fontSize: 10.5, color: AstraColors.faint)),
                   ],
                 ),
               ),
@@ -1206,8 +1207,8 @@ class _HttpViewState extends State<HttpView> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
-              const Text('秒', style: TextStyle(fontSize: 11.5, color: AstraColors.muted)),
+              SizedBox(width: 8),
+              Text('s', style: TextStyle(fontSize: 11.5, color: AstraColors.muted)),
             ],
           ),
         ),
@@ -1225,25 +1226,25 @@ class _HttpViewState extends State<HttpView> {
     final sseActive = state.sseRunning || state.sseLog.isNotEmpty;
     final hasTabs = result != null || state.scriptRan || sseActive;
     return AstraCard(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
       child: Column(
         children: [
           Row(
             children: [
-              const Text(
-                '响应',
+              Text(
+                'Response',
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               if (state.sending)
-                const SizedBox(
+                SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(strokeWidth: 2, color: AstraColors.accent),
                 )
               else if (result != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: statusColor(result.status).withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(6),
@@ -1257,52 +1258,52 @@ class _HttpViewState extends State<HttpView> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text(
                   '${result.ms} ms',
-                  style: const TextStyle(fontSize: 11, color: AstraColors.muted),
+                  style: TextStyle(fontSize: 11, color: AstraColors.muted),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text(
                   formatBytes(result.size),
-                  style: const TextStyle(fontSize: 11, color: AstraColors.muted),
+                  style: TextStyle(fontSize: 11, color: AstraColors.muted),
                 ),
               ],
               if (state.scriptRan && (failedTests > 0 || state.scriptError != null)) ...[
-                const SizedBox(width: 10),
-                const Icon(Icons.error_outline, size: 13, color: AstraColors.err),
-                const SizedBox(width: 4),
+                SizedBox(width: 10),
+                Icon(Icons.error_outline, size: 13, color: AstraColors.err),
+                SizedBox(width: 4),
                 Text(
-                  state.scriptError != null ? '脚本异常' : '$failedTests 个断言失败',
-                  style: const TextStyle(fontSize: 10.5, color: AstraColors.err),
+                  state.scriptError != null ? 'Script error' : '$failedTests assertion failures',
+                  style: TextStyle(fontSize: 10.5, color: AstraColors.err),
                 ),
               ],
               if (state.sseRunning) ...[
-                const SizedBox(width: 10),
-                const SizedBox(
+                SizedBox(width: 10),
+                SizedBox(
                   width: 12,
                   height: 12,
                   child: CircularProgressIndicator(strokeWidth: 1.6, color: AstraColors.ok),
                 ),
               ],
-              const Spacer(),
+              Spacer(),
               if (state.responseHistory.length > 1)
                 _iconAction(
                   icon: Icons.compare_arrows,
-                  tooltip: '对比最近两次响应',
+                  tooltip: 'Compare last two responses',
                   onPressed: () => showTextDiffDialog(
                     context,
-                    title: '响应对比',
+                    title: 'Response diff',
                     before: state.responseHistory[1].prettyBody,
                     after: state.responseHistory[0].prettyBody,
-                    beforeLabel: '上一次 · ${state.responseHistory[1].status}',
-                    afterLabel: '本次 · ${state.responseHistory[0].status}',
+                    beforeLabel: 'Previous · ${state.responseHistory[1].status}',
+                    afterLabel: 'Current · ${state.responseHistory[0].status}',
                   ),
                 ),
               if (result != null && state.selectedId != null)
                 _iconAction(
                   icon: Icons.bookmark_add_outlined,
-                  tooltip: '存为响应示例',
+                  tooltip: 'Save as example',
                   onPressed: () => showSaveExampleDialog(context, state, state.selectedId!),
                 ),
               if (result != null) _downloadButton(result),
@@ -1313,11 +1314,11 @@ class _HttpViewState extends State<HttpView> {
                           .map((e) => '${e.key}: ${e.value.join(', ')}')
                           .join('\n')
                       : result.prettyBody,
-                  tooltip: '复制响应内容',
+                  tooltip: 'Copy response',
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           if (hasTabs)
             Row(
               children: [
@@ -1327,21 +1328,21 @@ class _HttpViewState extends State<HttpView> {
                     selected: _respTab,
                     onSelect: (id) => setState(() => _respTab = id),
                     items: [
-                      if (result != null) const AstraTabItem('body', '响应体'),
-                      if (result != null) const AstraTabItem('headers', '响应头'),
+                      if (result != null) AstraTabItem('body', 'Body'),
+                      if (result != null) AstraTabItem('headers', 'Headers'),
                       if (state.responseCookies.isNotEmpty)
                         AstraTabItem(
                           'cookies',
                           'Cookies',
                           count: state.responseCookies.length,
                         ),
-                      if (result != null) const AstraTabItem('raw', '原始'),
+                      if (result != null) AstraTabItem('raw', 'Raw'),
                       if (sseActive)
-                        AstraTabItem('sse', '事件流', count: state.sseLog.length),
+                        AstraTabItem('sse', 'Events', count: state.sseLog.length),
                       if (state.scriptRan)
                         AstraTabItem(
                           'scripts',
-                          '脚本',
+                          'Scripts',
                           count: state.scriptTests.isEmpty ? null : state.scriptTests.length,
                         ),
                     ],
@@ -1350,22 +1351,22 @@ class _HttpViewState extends State<HttpView> {
                 if (result != null &&
                     _respTab == 'body' &&
                     _decodedJson != null) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   _viewToggle(),
                 ],
                 if (sseActive) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   GhostButton(
-                    label: state.sseRunning ? '停止' : '重新连接',
+                    label: state.sseRunning ? 'Stop' : 'Reconnect',
                     icon: state.sseRunning ? Icons.stop_circle_outlined : Icons.sync,
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     onPressed: state.sseRunning ? state.stopSse : state.startSse,
                   ),
                 ],
               ],
             ),
-          const SizedBox(height: 8),
-          const Divider(height: 1, color: AstraColors.line),
+          SizedBox(height: 8),
+          Divider(height: 1, color: AstraColors.line),
           Expanded(child: _responseContent()),
         ],
       ),
@@ -1388,16 +1389,16 @@ class _HttpViewState extends State<HttpView> {
     final error = state.responseError;
     if (error != null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
+        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.error_outline, size: 17, color: AstraColors.err),
-            const SizedBox(width: 9),
+            Icon(Icons.error_outline, size: 17, color: AstraColors.err),
+            SizedBox(width: 9),
             Expanded(
               child: SelectableText(
                 error,
-                style: const TextStyle(fontSize: 12, color: AstraColors.err, height: 1.6),
+                style: TextStyle(fontSize: 12, color: AstraColors.err, height: 1.6),
               ),
             ),
           ],
@@ -1406,10 +1407,10 @@ class _HttpViewState extends State<HttpView> {
     }
     final result = state.response;
     if (result == null) {
-      return const EmptyHint(
+      return EmptyHint(
         icon: Icons.bolt_rounded,
-        title: '等待发送请求',
-        subtitle: '输入地址后点击「发送」，或按 ⌘/Ctrl + Enter\n响应状态、耗时与内容会显示在这里',
+        title: 'Waiting for a request',
+        subtitle: 'Enter a URL and click Send, or press ⌘/Ctrl + Enter\nThe status, timing and content will appear here',
       );
     }
     if (_respTab == 'headers') {
@@ -1429,7 +1430,7 @@ class _HttpViewState extends State<HttpView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 6),
+            padding: EdgeInsets.only(top: 8, bottom: 6),
             child: Row(
               children: [
                 SizedBox(
@@ -1437,26 +1438,26 @@ class _HttpViewState extends State<HttpView> {
                   height: 33,
                   child: BoundTextField(
                     value: _headerFilter.text,
-                    hint: '过滤响应头',
+                    hint: 'Filter response headers',
                     fontSize: 11.5,
                     contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     onChanged: (value) {
                       _headerFilter.text = value;
                       setState(() {});
                     },
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 GhostButton(
-                  label: _headerSortAsc ? '名称 ↑' : '名称 ↓',
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  label: _headerSortAsc ? 'Name ↑' : 'Name ↓',
+                  padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   onPressed: () => setState(() => _headerSortAsc = !_headerSortAsc),
                 ),
-                const Spacer(),
+                Spacer(),
                 Text(
-                  '${entries.length} 个响应头',
-                  style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
+                  '${entries.length} response headers',
+                  style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
                 ),
               ],
             ),
@@ -1467,7 +1468,7 @@ class _HttpViewState extends State<HttpView> {
               itemBuilder: (context, index) {
                 final entry = entries[index];
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 7),
+                  padding: EdgeInsets.only(bottom: 7),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1498,7 +1499,7 @@ class _HttpViewState extends State<HttpView> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: SelectableText(
                           entry.value.join(', '),
@@ -1522,7 +1523,7 @@ class _HttpViewState extends State<HttpView> {
         }
       });
       buffer.write('\n');
-      buffer.write(result.text ?? '[二进制内容 ${formatBytes(result.size)}]');
+      buffer.write(result.text ?? '[binary content ${formatBytes(result.size)}]');
       return _textBlock(buffer.toString());
     }
     if (result.text == null) {
@@ -1560,8 +1561,8 @@ class _HttpViewState extends State<HttpView> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _viewChip('树形', 'tree'),
-          _viewChip('文本', 'text'),
+          _viewChip('Tree', 'tree'),
+          _viewChip('Text', 'text'),
         ],
       ),
     );
@@ -1578,29 +1579,29 @@ class _HttpViewState extends State<HttpView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          padding: EdgeInsets.only(top: 8, bottom: 8),
           child: Row(
             children: [
-              const Icon(Icons.image_outlined, size: 14, color: AstraColors.accent),
-              const SizedBox(width: 6),
-              const Text('图片预览', style: TextStyle(fontSize: 11.5, color: AstraColors.text)),
-              const SizedBox(width: 10),
+              Icon(Icons.image_outlined, size: 14, color: AstraColors.accent),
+              SizedBox(width: 6),
+              Text('Image preview', style: TextStyle(fontSize: 11.5, color: AstraColors.text)),
+              SizedBox(width: 10),
               Flexible(child: _metaChip(type)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(formatBytes(result.size),
                   style: monoStyle(size: 10.5, color: AstraColors.faint)),
-              const Spacer(),
+              Spacer(),
               _viewTogglePair(
-                leftLabel: '适应窗口',
-                rightLabel: '原始尺寸',
+                leftLabel: 'Fit',
+                rightLabel: 'Actual size',
                 leftActive: _imageFit,
                 onSelect: (fit) => setState(() => _imageFit = fit),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               GhostButton(
-                label: '保存图片',
+                label: 'Save image',
                 icon: Icons.download_rounded,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 onPressed: () => _saveResponse(result),
               ),
             ],
@@ -1609,7 +1610,7 @@ class _HttpViewState extends State<HttpView> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF0B0F17),
+              color: AstraColors.inset,
               border: Border.all(color: AstraColors.line),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -1618,34 +1619,34 @@ class _HttpViewState extends State<HttpView> {
               children: [
                 Positioned.fill(
                   child: GridPaper(
-                    color: const Color(0x0AFFFFFF),
+                    color: AstraColors.overlay,
                     interval: 24,
                     divisions: 2,
                     subdivisions: 2,
-                    child: const SizedBox.expand(),
+                    child: SizedBox.expand(),
                   ),
                 ),
                 Positioned.fill(
                   child: _imageFit
                       ? Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: EdgeInsets.all(14),
                           child: Image.memory(
                             bytes,
                             fit: BoxFit.contain,
                             filterQuality: FilterQuality.medium,
                             errorBuilder: (context, error, stack) =>
-                                _imageError('图片解析失败'),
+                                _imageError('Failed to decode image'),
                           ),
                         )
                       : SingleChildScrollView(
-                          padding: const EdgeInsets.all(14),
+                          padding: EdgeInsets.all(14),
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Image.memory(
                               bytes,
                               filterQuality: FilterQuality.medium,
                               errorBuilder: (context, error, stack) =>
-                                  _imageError('图片解析失败'),
+                                  _imageError('Failed to decode image'),
                             ),
                           ),
                         ),
@@ -1663,9 +1664,9 @@ class _HttpViewState extends State<HttpView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.broken_image_outlined, size: 26, color: AstraColors.err),
-          const SizedBox(height: 8),
-          Text(message, style: const TextStyle(fontSize: 12, color: AstraColors.err)),
+          Icon(Icons.broken_image_outlined, size: 26, color: AstraColors.err),
+          SizedBox(height: 8),
+          Text(message, style: TextStyle(fontSize: 12, color: AstraColors.err)),
         ],
       ),
     );
@@ -1675,11 +1676,11 @@ class _HttpViewState extends State<HttpView> {
     final mime = type.split(';').first.trim();
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: BoxConstraints(maxWidth: 360),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+          padding: EdgeInsets.fromLTRB(24, 26, 24, 22),
           decoration: BoxDecoration(
-            color: const Color(0x08FFFFFF),
+            color: AstraColors.overlay,
             border: Border.all(color: AstraColors.line),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -1693,31 +1694,31 @@ class _HttpViewState extends State<HttpView> {
                   color: AstraColors.accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.insert_drive_file_outlined,
+                child: Icon(Icons.insert_drive_file_outlined,
                     size: 22, color: AstraColors.accent),
               ),
-              const SizedBox(height: 14),
-              const Text(
-                '二进制响应',
+              SizedBox(height: 14),
+              Text(
+                'Binary response',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 '${mime.isEmpty ? 'application/octet-stream' : mime} · ${formatBytes(result.size)}',
                 textAlign: TextAlign.center,
                 style: monoStyle(size: 10.8, color: AstraColors.faint),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                '该内容无法以文本展示，可下载到本地查看',
+              SizedBox(height: 6),
+              Text(
+                'This content cannot be displayed as text. Download it to view locally.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 11, color: AstraColors.muted, height: 1.5),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               GradientButton(
-                label: '保存到本地',
+                label: 'Save to disk',
                 icon: Icons.download_rounded,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                padding: EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                 onPressed: () => _saveResponse(result),
               ),
             ],
@@ -1729,9 +1730,9 @@ class _HttpViewState extends State<HttpView> {
 
   Widget _metaChip(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0x0DFFFFFF),
+        color: AstraColors.overlay,
         border: Border.all(color: AstraColors.line),
         borderRadius: BorderRadius.circular(5),
       ),
@@ -1770,7 +1771,7 @@ class _HttpViewState extends State<HttpView> {
       borderRadius: BorderRadius.circular(6),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
         decoration: BoxDecoration(
           color: active ? AstraColors.accent.withValues(alpha: 0.16) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
@@ -1788,11 +1789,11 @@ class _HttpViewState extends State<HttpView> {
 
   Widget _downloadButton(HttpResult result) {
     return Tooltip(
-      message: '下载响应内容',
+      message: 'Download response content',
       child: InkWell(
         borderRadius: BorderRadius.circular(7),
         onTap: () => _saveResponse(result),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(6),
           child: Icon(Icons.download_rounded, size: 14, color: AstraColors.muted),
         ),
@@ -1805,9 +1806,9 @@ class _HttpViewState extends State<HttpView> {
     final name = _suggestFileName(type);
     try {
       final path = await saveBytesFile(name, Uint8List.fromList(result.bytes), type);
-      if (path != null) state.showToast('已保存到 $path');
+      if (path != null) state.showToast('Saved to $path');
     } catch (err) {
-      state.showToast('保存失败：$err');
+      state.showToast('Save failed: $err');
     }
   }
 
@@ -1836,7 +1837,7 @@ class _HttpViewState extends State<HttpView> {
         borderRadius: BorderRadius.circular(7),
         onTap: onPressed,
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(6),
           child: Icon(icon, size: 14, color: AstraColors.muted),
         ),
       ),
@@ -1846,32 +1847,32 @@ class _HttpViewState extends State<HttpView> {
   Widget _cookiesPanel() {
     final list = state.responseCookies;
     if (list.isEmpty) {
-      return const EmptyHint(
+      return EmptyHint(
         icon: Icons.cookie_outlined,
-        title: '没有收到 Cookie',
-        subtitle: '响应中的 Set-Cookie 会显示在这里',
+        title: 'No cookies received',
+        subtitle: 'Set-Cookie headers from the response will appear here',
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 6),
+          padding: EdgeInsets.only(top: 8, bottom: 6),
           child: Row(
             children: [
-              const Icon(Icons.cookie_outlined, size: 13, color: AstraColors.accent),
-              const SizedBox(width: 6),
+              Icon(Icons.cookie_outlined, size: 13, color: AstraColors.accent),
+              SizedBox(width: 6),
               Text(
-                '${list.length} 个 Cookie',
-                style: const TextStyle(fontSize: 11, color: AstraColors.muted),
+                '${list.length} cookies',
+                style: TextStyle(fontSize: 11, color: AstraColors.muted),
               ),
-              const Spacer(),
+              Spacer(),
               CopyButton(
                 text: list
                     .map((item) =>
                         '${item.name}=${item.value}; domain=${item.domain}; path=${item.path}')
                     .join('\n'),
-                tooltip: '复制全部 Cookie',
+                tooltip: 'Copy all cookies',
               ),
             ],
           ),
@@ -1882,10 +1883,10 @@ class _HttpViewState extends State<HttpView> {
             itemBuilder: (context, index) {
               final cookie = list[index];
               return Container(
-                margin: const EdgeInsets.only(bottom: 7),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                margin: EdgeInsets.only(bottom: 7),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0x06FFFFFF),
+                  color: AstraColors.overlay,
                   border: Border.all(color: AstraColors.line),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1901,19 +1902,19 @@ class _HttpViewState extends State<HttpView> {
                           ),
                         ),
                         if (cookie.secure)
-                          const _CookieTag('Secure', Color(0xFF4ADE80)),
-                        if (cookie.httpOnly) const _CookieTag('HttpOnly', Color(0xFF60A5FA)),
+                          _CookieTag('Secure', AstraColors.ok),
+                        if (cookie.httpOnly) _CookieTag('HttpOnly', AstraColors.accent),
                         if (cookie.expired)
-                          const _CookieTag('已过期', AstraColors.err),
+                          _CookieTag('Expired', AstraColors.err),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     SelectableText(
                       cookie.value,
-                      style: monoStyle(size: 11, color: const Color(0xFFD6DEF0), height: 1.5),
+                      style: monoStyle(size: 11, color: AstraColors.codeText, height: 1.5),
                     ),
                     if (cookie.domain.isNotEmpty || cookie.path.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                      SizedBox(height: 3),
                       Text(
                         '${cookie.domain.isEmpty ? '-' : cookie.domain}${cookie.path}',
                         style: monoStyle(size: 10, color: AstraColors.faint),
@@ -1935,7 +1936,7 @@ class _HttpViewState extends State<HttpView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 6),
+          padding: EdgeInsets.only(top: 8, bottom: 6),
           child: Row(
             children: [
               Icon(
@@ -1943,10 +1944,10 @@ class _HttpViewState extends State<HttpView> {
                 size: 13,
                 color: state.sseRunning ? AstraColors.ok : AstraColors.faint,
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  state.sseStatus ?? '等待事件…',
+                  state.sseStatus ?? 'Waiting for events…',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1955,26 +1956,26 @@ class _HttpViewState extends State<HttpView> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
-                '${events.length} 条事件',
-                style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
+                '${events.length} events',
+                style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
               ),
-              const Spacer(),
+              Spacer(),
               CopyButton(
                 text: events
                     .map((item) => 'event: ${item.event}\ndata: ${item.data}')
                     .join('\n\n'),
-                tooltip: '复制事件流',
+                tooltip: 'Copy event stream',
               ),
             ],
           ),
         ),
         Expanded(
           child: events.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    '等待服务端推送事件…',
+                    'Waiting for server events…',
                     style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
                   ),
                 )
@@ -1986,7 +1987,7 @@ class _HttpViewState extends State<HttpView> {
                     final stamp =
                         '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 7),
+                      padding: EdgeInsets.only(bottom: 7),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1999,7 +2000,7 @@ class _HttpViewState extends State<HttpView> {
                           ),
                           Container(
                             padding:
-                                const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
                               color: AstraColors.accent.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
@@ -2009,13 +2010,13 @@ class _HttpViewState extends State<HttpView> {
                               style: monoStyle(size: 9.5, color: AstraColors.accent),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Expanded(
                             child: SelectableText(
                               event.data,
                               style: monoStyle(
                                 size: 11.2,
-                                color: const Color(0xFFD6DEF0),
+                                color: AstraColors.codeText,
                                 height: 1.5,
                               ),
                             ),
@@ -2035,42 +2036,42 @@ class _HttpViewState extends State<HttpView> {
     final tests = state.scriptTests;
     final error = state.scriptError;
     if (!state.scriptRan) {
-      return const EmptyHint(
+      return EmptyHint(
         icon: Icons.code_rounded,
-        title: '尚未执行脚本',
-        subtitle: '在请求的 Scripts 标签中填写前置 / 后置脚本\n发送请求后会在这里显示控制台输出与断言结果',
+        title: 'No scripts run yet',
+        subtitle: 'Add pre-request or post-response scripts in the Scripts tab\nConsole output and test results will appear here after sending',
       );
     }
     if (error == null && logs.isEmpty && tests.isEmpty) {
-      return const EmptyHint(
+      return EmptyHint(
         icon: Icons.check_circle_outline,
-        title: '脚本执行完成',
-        subtitle: '没有控制台输出，也没有断言结果',
+        title: 'Script run complete',
+        subtitle: 'No console output or test results',
       );
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
+      padding: EdgeInsets.only(top: 10, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (error != null)
             Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              margin: EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0x14F87171),
-                border: Border.all(color: const Color(0x3DF87171)),
+                color: AstraColors.errSoft,
+                border: Border.all(color: AstraColors.errBorder),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline, size: 14, color: AstraColors.err),
-                  const SizedBox(width: 8),
+                  Icon(Icons.error_outline, size: 14, color: AstraColors.err),
+                  SizedBox(width: 8),
                   Expanded(
                     child: SelectableText(
                       error,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: AstraColors.err,
                         height: 1.5,
@@ -2081,11 +2082,11 @@ class _HttpViewState extends State<HttpView> {
               ),
             ),
           if (tests.isNotEmpty) ...[
-            const SectionLabel('断言结果'),
+            SectionLabel('Test results'),
             ...tests.map((test) {
-              final color = test.passed ? const Color(0xFF4ADE80) : AstraColors.err;
+              final color = test.passed ? AstraColors.ok : AstraColors.err;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: 6),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2094,7 +2095,7 @@ class _HttpViewState extends State<HttpView> {
                       size: 13,
                       color: color,
                     ),
-                    const SizedBox(width: 7),
+                    SizedBox(width: 7),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2106,7 +2107,7 @@ class _HttpViewState extends State<HttpView> {
                           if (test.error != null)
                             Text(
                               test.error!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10.5,
                                 color: AstraColors.muted,
                                 height: 1.45,
@@ -2119,18 +2120,18 @@ class _HttpViewState extends State<HttpView> {
                 ),
               );
             }),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
           ],
           if (logs.isNotEmpty) ...[
-            const SectionLabel('控制台'),
+            SectionLabel('Console'),
             ...logs.map((log) {
               final color = switch (log.level) {
                 'warn' => AstraColors.warn,
                 'error' => AstraColors.err,
-                _ => const Color(0xFFD6DEF0),
+                _ => AstraColors.codeText,
               };
               return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2143,7 +2144,7 @@ class _HttpViewState extends State<HttpView> {
                     ),
                     Expanded(
                       child: SelectableText(
-                        log.message.isEmpty ? '(空)' : log.message,
+                        log.message.isEmpty ? '(empty)' : log.message,
                         style: monoStyle(size: 11.3, color: color, height: 1.55),
                       ),
                     ),
@@ -2158,30 +2159,30 @@ class _HttpViewState extends State<HttpView> {
   }
 
   Widget _textBlock(String text) {
-    final clipped = text.length > 4000000 ? '${text.substring(0, 4000000)}\n\n… 内容过长，已截断显示' : text;
-    final show = clipped.isEmpty ? '(空响应)' : clipped;
+    final clipped = text.length > 4000000 ? '${text.substring(0, 4000000)}\n\n… Content too long, truncated' : text;
+    final show = clipped.isEmpty ? '(empty response)' : clipped;
     final lines = show.split('\n');
     if (lines.length <= 400) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 10, bottom: 8),
+        padding: EdgeInsets.only(top: 10, bottom: 8),
         child: Container(
           alignment: Alignment.topLeft,
           width: double.infinity,
           child: SelectableText(
             show,
             textAlign: TextAlign.left,
-            style: monoStyle(size: 11.8, height: 1.6, color: const Color(0xFFD6DEF0)),
+            style: monoStyle(size: 11.8, height: 1.6, color: AstraColors.codeText),
           ),
         ),
       );
     }
     // 大响应按行虚拟滚动，避免一次性构建整段文本造成卡顿
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
+      padding: EdgeInsets.only(top: 10, bottom: 8),
       itemCount: lines.length,
       itemBuilder: (context, index) => SelectableText(
         lines[index].isEmpty ? ' ' : lines[index],
-        style: monoStyle(size: 11.8, height: 1.6, color: const Color(0xFFD6DEF0)),
+        style: monoStyle(size: 11.8, height: 1.6, color: AstraColors.codeText),
       ),
     );
   }
@@ -2191,13 +2192,13 @@ class _CookieTag extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _CookieTag(this.label, this.color);
+  _CookieTag(this.label, this.color);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      margin: EdgeInsets.only(left: 5),
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(4),
@@ -2215,7 +2216,7 @@ class _MethodSelector extends StatelessWidget {
   final String value;
   final ValueChanged<String> onChanged;
 
-  const _MethodSelector({required this.value, required this.onChanged});
+  _MethodSelector({required this.value, required this.onChanged});
 
   static const List<String> methods = [
     'GET',
@@ -2231,12 +2232,12 @@ class _MethodSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = methods.contains(value) ? value : 'GET';
     return PopupMenuButton<String>(
-      tooltip: '请求方法',
+      tooltip: 'Request method',
       initialValue: current,
       position: PopupMenuPosition.under,
       color: AstraColors.surface2,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 100, maxWidth: 160),
+      constraints: BoxConstraints(minWidth: 100, maxWidth: 160),
       onSelected: onChanged,
       itemBuilder: (context) => [
         for (final method in methods)
@@ -2256,9 +2257,9 @@ class _MethodSelector extends StatelessWidget {
       child: Container(
         width: 100,
         height: 32,
-        padding: const EdgeInsets.only(left: 9, right: 6),
+        padding: EdgeInsets.only(left: 9, right: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B0F17),
+          color: AstraColors.inset,
           border: Border.all(color: AstraColors.line),
           borderRadius: BorderRadius.circular(9),
         ),
@@ -2276,7 +2277,7 @@ class _MethodSelector extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.expand_more, size: 15, color: AstraColors.faint),
+            Icon(Icons.expand_more, size: 15, color: AstraColors.faint),
           ],
         ),
       ),
@@ -2292,7 +2293,7 @@ class _FormDataEditor extends StatelessWidget {
   final List<FormRow> rows;
   final VoidCallback onChanged;
 
-  const _FormDataEditor({required this.rows, required this.onChanged});
+  _FormDataEditor({required this.rows, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -2320,11 +2321,11 @@ class _FormDataEditor extends StatelessWidget {
             },
             style: TextButton.styleFrom(
               foregroundColor: AstraColors.muted,
-              textStyle: const TextStyle(fontSize: 11.5),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              textStyle: TextStyle(fontSize: 11.5),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             ),
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('添加字段'),
+            icon: Icon(Icons.add, size: 14),
+            label: Text('Add field'),
           ),
         ),
       ],
@@ -2337,7 +2338,7 @@ class _FormDataRow extends StatefulWidget {
   final VoidCallback onChanged;
   final VoidCallback onRemove;
 
-  const _FormDataRow({
+  _FormDataRow({
     super.key,
     required this.row,
     required this.onChanged,
@@ -2371,7 +2372,7 @@ class _FormDataRowState extends State<_FormDataRow> {
     final row = widget.row;
     final isFile = row.type == 'file';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: EdgeInsets.only(bottom: 7),
       child: Row(
         children: [
           SizedBox(
@@ -2381,7 +2382,7 @@ class _FormDataRowState extends State<_FormDataRow> {
               child: Checkbox(
                 value: row.on,
                 activeColor: AstraColors.accent,
-                side: const BorderSide(color: AstraColors.lineStrong),
+                side: BorderSide(color: AstraColors.lineStrong),
                 onChanged: (value) {
                   setState(() => row.on = value ?? false);
                   widget.onChanged();
@@ -2389,15 +2390,15 @@ class _FormDataRowState extends State<_FormDataRow> {
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Expanded(
             flex: 5,
             child: TextField(
               controller: _key,
               style: monoStyle(size: 12),
               decoration: astraInput(
-                hint: '字段名',
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                hint: 'Field name',
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
               onChanged: (value) {
                 row.k = value;
@@ -2405,29 +2406,29 @@ class _FormDataRowState extends State<_FormDataRow> {
               },
             ),
           ),
-          const SizedBox(width: 7),
+          SizedBox(width: 7),
           GestureDetector(
             onTap: () {
               setState(() => row.type = isFile ? 'text' : 'file');
               widget.onChanged();
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 9, vertical: 10),
               decoration: BoxDecoration(
-                color: isFile ? const Color(0x1F8B5CF6) : const Color(0x0AFFFFFF),
-                border: Border.all(color: isFile ? const Color(0x408B5CF6) : AstraColors.line),
+                color: isFile ? AstraColors.accent2Soft : AstraColors.overlay,
+                border: Border.all(color: isFile ? AstraColors.accent2Soft : AstraColors.line),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                isFile ? '文件' : '文本',
+                isFile ? 'File' : 'Text',
                 style: TextStyle(
                   fontSize: 11,
-                  color: isFile ? const Color(0xFFC4B5FD) : AstraColors.muted,
+                  color: isFile ? AstraColors.codeKeyword : AstraColors.muted,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 7),
+          SizedBox(width: 7),
           Expanded(
             flex: 8,
             child: isFile
@@ -2436,8 +2437,8 @@ class _FormDataRowState extends State<_FormDataRow> {
                     controller: _value,
                     style: monoStyle(size: 12),
                     decoration: astraInput(
-                      hint: '字段值（支持 {{变量}}）',
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      hint: 'Field value (supports {{variables}})',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     ),
                     onChanged: (value) {
                       row.v = value;
@@ -2448,9 +2449,9 @@ class _FormDataRowState extends State<_FormDataRow> {
           SizedBox(
             width: 32,
             child: IconButton(
-              tooltip: '删除该行',
+              tooltip: 'Delete row',
               onPressed: widget.onRemove,
-              icon: const Icon(Icons.close, size: 15),
+              icon: Icon(Icons.close, size: 15),
               color: AstraColors.faint,
             ),
           ),
@@ -2467,10 +2468,10 @@ class _FormDataRowState extends State<_FormDataRow> {
       borderRadius: BorderRadius.circular(9),
       child: Container(
         height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B0F17),
-          border: Border.all(color: ready ? const Color(0x408B5CF6) : AstraColors.line),
+          color: AstraColors.inset,
+          border: Border.all(color: ready ? AstraColors.accent2Soft : AstraColors.line),
           borderRadius: BorderRadius.circular(9),
         ),
         child: Row(
@@ -2478,16 +2479,16 @@ class _FormDataRowState extends State<_FormDataRow> {
             Icon(
               ready ? Icons.insert_drive_file_outlined : Icons.upload_file_outlined,
               size: 15,
-              color: ready ? const Color(0xFFC4B5FD) : AstraColors.faint,
+              color: ready ? AstraColors.codeKeyword : AstraColors.faint,
             ),
-            const SizedBox(width: 7),
+            SizedBox(width: 7),
             Expanded(
               child: Text(
                 file == null
-                    ? '选择文件'
+                    ? 'Choose file'
                     : file.usable
                         ? '${file.name} · ${formatBytes(file.size)}'
-                        : '${file.name}（需重新选择）',
+                        : '${file.name} (needs re-selection)',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(

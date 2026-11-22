@@ -5,13 +5,14 @@ import '../state.dart';
 import 'advanced_dialogs.dart';
 import 'bound_text_field.dart';
 import 'dialogs.dart';
+import 'runner_dialog.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
 class Sidebar extends StatefulWidget {
   final AppState state;
 
-  const Sidebar({super.key, required this.state});
+  Sidebar({super.key, required this.state});
 
   @override
   State<Sidebar> createState() => _SidebarState();
@@ -51,25 +52,25 @@ class _SidebarState extends State<Sidebar> {
     final state = widget.state;
     return Container(
       width: 282,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AstraColors.bgSoft,
         border: Border(right: BorderSide(color: AstraColors.line)),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x05FFFFFF), Color(0x00000000)],
+          colors: [AstraColors.overlay, Color(0x00000000)],
         ),
       ),
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+            padding: EdgeInsets.fromLTRB(14, 14, 14, 8),
             child: Row(
               children: [
-                _tabButton('collections', state.mode == 'ws' ? '连接' : '集合',
+                _tabButton('collections', state.mode == 'ws' ? 'Connections' : 'Collections',
                     state.entriesFor(state.mode).length),
-                const SizedBox(width: 5),
-                _tabButton('history', '历史', state.historyFor(state.mode).length),
+                SizedBox(width: 5),
+                _tabButton('history', 'History', state.historyFor(state.mode).length),
               ],
             ),
           ),
@@ -78,15 +79,17 @@ class _SidebarState extends State<Sidebar> {
                 ? Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+                        padding: EdgeInsets.fromLTRB(14, 2, 14, 6),
                         child: SizedBox(
                           height: 32,
                           child: BoundTextField(
                             value: _search.text,
-                            hint: state.mode == 'ws' ? '搜索连接' : '搜索请求、文件夹或集合',
+                            hint: state.mode == 'ws'
+                                ? 'Search connections'
+                                : 'Search requests, folders or collections',
                             fontSize: 11.5,
                             contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             onChanged: (value) {
                               _search.text = value;
                               setState(() {});
@@ -101,7 +104,7 @@ class _SidebarState extends State<Sidebar> {
           ),
           if (tab == 'history' && state.historyFor(state.mode).isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               child: Row(
                 children: [
                   if (!_historySelectMode) ...[
@@ -109,20 +112,21 @@ class _SidebarState extends State<Sidebar> {
                       onPressed: () => setState(() => _historySelectMode = true),
                       style: TextButton.styleFrom(
                         foregroundColor: AstraColors.faint,
-                        textStyle: const TextStyle(fontSize: 11),
+                        textStyle: TextStyle(fontSize: 11),
                         padding: EdgeInsets.zero,
                       ),
-                      child: const Text('多选'),
+                      child: Text('Select'),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     TextButton(
                       onPressed: () async {
                         final count = state.historyFor(state.mode).length;
                         final ok = await showConfirmDialog(
                           context,
-                          title: '清空历史',
-                          message: '将清除当前 Session 下的全部 $count 条历史记录，此操作不可撤销。',
-                          confirmLabel: '清空',
+                          title: 'Clear History',
+                          message:
+                              'This will delete all $count history entries in the current session. This cannot be undone.',
+                          confirmLabel: 'Clear',
                         );
                         if (ok) {
                           final ids = state
@@ -135,27 +139,27 @@ class _SidebarState extends State<Sidebar> {
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: AstraColors.faint,
-                        textStyle: const TextStyle(fontSize: 11),
+                        textStyle: TextStyle(fontSize: 11),
                         padding: EdgeInsets.zero,
                       ),
-                      child: const Text('清空'),
+                      child: Text('Clear'),
                     ),
                   ] else ...[
                     Text(
-                      '已选 ${_selectedHistory.length} 条',
-                      style: const TextStyle(fontSize: 11, color: AstraColors.muted),
+                      '${_selectedHistory.length} selected',
+                      style: TextStyle(fontSize: 11, color: AstraColors.muted),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     TextButton(
                       onPressed: _exitHistorySelect,
                       style: TextButton.styleFrom(
                         foregroundColor: AstraColors.faint,
-                        textStyle: const TextStyle(fontSize: 11),
+                        textStyle: TextStyle(fontSize: 11),
                         padding: EdgeInsets.zero,
                       ),
-                      child: const Text('取消'),
+                      child: Text('Cancel'),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     TextButton(
                       onPressed: _selectedHistory.isEmpty
                           ? null
@@ -166,32 +170,35 @@ class _SidebarState extends State<Sidebar> {
                             },
                       style: TextButton.styleFrom(
                         foregroundColor: AstraColors.err,
-                        textStyle: const TextStyle(fontSize: 11),
+                        textStyle: TextStyle(fontSize: 11),
                         padding: EdgeInsets.zero,
                       ),
-                      child: const Text('删除选中'),
+                      child: Text('Delete Selected'),
                     ),
                   ],
                 ],
               ),
             ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AstraColors.line)),
             ),
             child: Row(
               children: [
-                GradientButton(
-                  label: state.mode == 'ws' ? '新建连接' : '新建请求',
-                  icon: Icons.add,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  onPressed: state.newRequest,
+                Tooltip(
+                  message: state.mode == 'ws' ? 'New Connection' : 'New Request',
+                  child: GradientButton(
+                    label: 'New',
+                    icon: Icons.add,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    onPressed: state.newRequest,
+                  ),
                 ),
-                const Spacer(),
+                Spacer(),
                 Text(
                   'v${AppState.version}',
-                  style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                  style: TextStyle(fontSize: 10, color: AstraColors.faint),
                 ),
               ],
             ),
@@ -207,24 +214,28 @@ class _SidebarState extends State<Sidebar> {
       child: GestureDetector(
         onTap: () => setState(() => tab = id),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: active ? const Color(0x0DFFFFFF) : Colors.transparent,
+            color: active ? AstraColors.overlay : Colors.transparent,
             border: Border.all(color: active ? AstraColors.line : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 0.5,
-                  color: active ? AstraColors.text : AstraColors.muted,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                    color: active ? AstraColors.text : AstraColors.muted,
+                  ),
                 ),
               ),
-              const SizedBox(width: 5),
+              SizedBox(width: 5),
               Text(
                 '$count',
                 style: TextStyle(
@@ -251,18 +262,18 @@ class _SidebarState extends State<Sidebar> {
         entries.where((entry) => !knownGroupIds.contains(entry.groupId)).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+      padding: EdgeInsets.fromLTRB(10, 4, 10, 12),
       children: [
         _createGroupTile(state),
         if (groups.isEmpty && ungrouped.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 40),
+            padding: EdgeInsets.only(top: 40),
             child: EmptyHint(
               icon: isWs ? Icons.electrical_services_rounded : Icons.inbox_outlined,
-              title: isWs ? '还没有保存的连接' : '还没有保存的请求',
+              title: isWs ? 'No saved connections yet' : 'No saved requests yet',
               subtitle: isWs
-                  ? '配置好连接地址与 Header 后按 ⌘ / Ctrl + S，\n即可按集合归档常用 WebSocket 连接'
-                  : '点击「新建集合」建立分组，\n再把请求保存到对应的集合中',
+                  ? 'Configure the connection URL and headers, then press ⌘ / Ctrl + S\nto save frequently used WebSocket connections into a collection'
+                  : 'Click "New Collection" to create a group,\nthen save requests into it',
             ),
           ),
         for (final group in groups) ...[
@@ -277,10 +288,10 @@ class _SidebarState extends State<Sidebar> {
         ],
         if (ungrouped.isNotEmpty) ...[
           if (groups.isNotEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(8, 10, 8, 6),
               child: Text(
-                '未分组',
+                'Ungrouped',
                 style: TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
               ),
             ),
@@ -310,26 +321,26 @@ class _SidebarState extends State<Sidebar> {
     if (entries.isEmpty && folders.isEmpty && groups.isEmpty) {
       return EmptyHint(
         icon: Icons.search_off_rounded,
-        title: '没有匹配「$query」的结果',
-        subtitle: isWs ? '试试连接名称或地址片段' : '试试请求名称、URL 或备注片段',
+        title: 'No results for "$query"',
+        subtitle: isWs ? 'Try a connection name or part of the URL' : 'Try a request name, URL or description',
       );
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+      padding: EdgeInsets.fromLTRB(10, 4, 10, 12),
       children: [
-        if (groups.isNotEmpty) const _SearchSectionLabel('集合'),
+        if (groups.isNotEmpty) _SearchSectionLabel('Collections'),
         for (final group in groups)
           _SideItem(
             active: false,
             method: isWs ? 'WS' : 'API',
             name: group.name,
-            url: '${state.entriesFor(state.mode).where((e) => e.groupId == group.id).length} 个条目',
+            url: '${state.entriesFor(state.mode).where((e) => e.groupId == group.id).length} items',
             onTap: () => state.toggleGroup(group.id),
             onDelete: () {},
             hideDelete: true,
           ),
-        if (folders.isNotEmpty) const _SearchSectionLabel('文件夹'),
+        if (folders.isNotEmpty) _SearchSectionLabel('Folders'),
         for (final folder in folders)
           _SideItem(
             active: false,
@@ -340,7 +351,7 @@ class _SidebarState extends State<Sidebar> {
             onDelete: () {},
             hideDelete: true,
           ),
-        if (entries.isNotEmpty) const _SearchSectionLabel('请求'),
+        if (entries.isNotEmpty) _SearchSectionLabel('Requests'),
         for (final entry in entries) _entryTile(state, entry, 0),
       ],
     );
@@ -374,7 +385,7 @@ class _SidebarState extends State<Sidebar> {
       onTap: () async {
         final name = await showGroupDialog(
           context,
-          title: isWs ? '新建连接集合' : '新建请求集合',
+          title: isWs ? 'New Connection Collection' : 'New Request Collection',
           initial: '',
           mode: state.mode,
         );
@@ -382,14 +393,18 @@ class _SidebarState extends State<Sidebar> {
         state.createGroup(name, state.mode);
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: 9, vertical: 7),
         child: Row(
           children: [
-            const Icon(Icons.add, size: 13, color: AstraColors.accent),
-            const SizedBox(width: 7),
-            Text(
-              isWs ? '新建连接集合' : '新建集合',
-              style: const TextStyle(fontSize: 11.5, color: AstraColors.muted),
+            Icon(Icons.add, size: 13, color: AstraColors.accent),
+            SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                isWs ? 'New Connection Collection' : 'New Collection',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: AstraColors.muted),
+              ),
             ),
           ],
         ),
@@ -397,10 +412,266 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
+  Future<void> _showMenu(
+    Offset position,
+    List<PopupMenuEntry<String>> items,
+    ValueChanged<String> onSelected,
+  ) async {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      color: AstraColors.surface2,
+      items: items,
+    );
+    if (selected != null) onSelected(selected);
+  }
+
+  List<PopupMenuEntry<String>> _groupMenuItems(CollectionGroup group, bool isWs) {
+    return [
+      PopupMenuItem<String>(
+        value: 'api',
+        height: 36,
+        child: Text(
+          isWs ? 'New Connection' : 'Add Request',
+          style: TextStyle(fontSize: 12),
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'folder',
+        height: 36,
+        child: Text('Add Folder', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'run',
+        height: 36,
+        child: Text('Run Collection', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'variables',
+        height: 36,
+        child: Text('Variables', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'auth',
+        height: 36,
+        child: Text('Authorization', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'monitor',
+        height: 36,
+        child: Text('Monitors', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'duplicate',
+        height: 36,
+        child: Text('Duplicate', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'rename',
+        height: 36,
+        child: Text('Rename', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'delete',
+        height: 36,
+        child: Text(
+          'Delete Collection',
+          style: TextStyle(fontSize: 12, color: AstraColors.err),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _handleGroupAction(
+    AppState state,
+    CollectionGroup group,
+    String value,
+  ) async {
+    final isWs = group.mode == 'ws';
+    switch (value) {
+      case 'api':
+        state.newRequestIn(group.id, '');
+        break;
+      case 'folder':
+        await _createFolder(state, group, '');
+        break;
+      case 'run':
+        await showRunnerDialog(context, state, groupId: group.id);
+        break;
+      case 'rename':
+        final name = await showGroupDialog(
+          context,
+          title: 'Rename Collection',
+          initial: group.name,
+          mode: group.mode,
+        );
+        if (name != null) state.renameGroup(group.id, name);
+        break;
+      case 'variables':
+        await showScopeVariablesDialog(
+          context,
+          state,
+          title: 'Collection Variables · ${group.name}',
+          rows: group.variables,
+          onSave: (rows) => state.setCollectionVariables(group.id, rows),
+        );
+        break;
+      case 'auth':
+        await showScopeAuthDialog(
+          context,
+          title: 'Collection Authorization · ${group.name}',
+          current: group.auth,
+          onSave: (auth) => state.setCollectionAuth(group.id, auth),
+        );
+        break;
+      case 'monitor':
+        await showMonitorsDialog(context, state, group);
+        break;
+      case 'duplicate':
+        final copy = state.duplicateGroup(group.id);
+        if (copy != null) state.showToast('Copied as "${copy.name}"');
+        break;
+      case 'delete':
+        final ok = await showConfirmDialog(
+          context,
+          title: 'Delete Collection',
+          message:
+              'Deleting "${group.name}" also removes every ${isWs ? 'connection' : 'request'} and folder inside it. This cannot be undone.',
+        );
+        if (ok) state.deleteGroup(group.id);
+        break;
+    }
+  }
+
+  List<PopupMenuEntry<String>> _folderMenuItems(bool isWs) {
+    return [
+      PopupMenuItem<String>(
+        value: 'api',
+        height: 36,
+        child: Text(
+          isWs ? 'New Connection' : 'Add Request',
+          style: TextStyle(fontSize: 12),
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'folder',
+        height: 36,
+        child: Text('Add Folder', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'run',
+        height: 36,
+        child: Text('Run Folder', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'variables',
+        height: 36,
+        child: Text('Variables', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'auth',
+        height: 36,
+        child: Text('Authorization', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'duplicate',
+        height: 36,
+        child: Text('Duplicate', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'rename',
+        height: 36,
+        child: Text('Rename', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuDivider(),
+      PopupMenuItem<String>(
+        value: 'delete',
+        height: 36,
+        child: Text(
+          'Delete Folder',
+          style: TextStyle(fontSize: 12, color: AstraColors.err),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _handleFolderAction(
+    AppState state,
+    CollectionGroup? group,
+    CollectionFolder folder,
+    String value,
+  ) async {
+    final isWs = group?.mode == 'ws';
+    switch (value) {
+      case 'api':
+        state.newRequestIn(folder.groupId, folder.id);
+        break;
+      case 'folder':
+        if (group != null) await _createFolder(state, group, folder.id);
+        break;
+      case 'run':
+        await showRunnerDialog(
+          context,
+          state,
+          groupId: folder.groupId,
+          folderId: folder.id,
+        );
+        break;
+      case 'rename':
+        final name = await showGroupDialog(
+          context,
+          title: 'Rename Folder',
+          initial: folder.name,
+          mode: group?.mode ?? 'http',
+        );
+        if (name != null) state.renameFolder(folder.id, name);
+        break;
+      case 'variables':
+        await showScopeVariablesDialog(
+          context,
+          state,
+          title: 'Folder Variables · ${folder.name}',
+          rows: folder.variables,
+          onSave: (rows) => state.setFolderVariables(folder.id, rows),
+        );
+        break;
+      case 'auth':
+        await showScopeAuthDialog(
+          context,
+          title: 'Folder Authorization · ${folder.name}',
+          current: folder.auth,
+          onSave: (auth) => state.setFolderAuth(folder.id, auth),
+        );
+        break;
+      case 'duplicate':
+        final copy = state.duplicateFolder(folder.id);
+        if (copy != null) state.showToast('Copied as "${copy.name}"');
+        break;
+      case 'delete':
+        final ok = await showConfirmDialog(
+          context,
+          title: 'Delete Folder',
+          message:
+              'Deleting "${folder.name}" also removes every ${isWs == true ? 'connection' : 'request'} and subfolder inside it. This cannot be undone.',
+        );
+        if (ok) state.deleteFolder(folder.id);
+        break;
+    }
+  }
+
   Future<void> _createFolder(AppState state, CollectionGroup group, String parentId) async {
     final name = await showGroupDialog(
       context,
-      title: parentId.isEmpty ? '新建文件夹' : '新建子文件夹',
+      title: parentId.isEmpty ? 'New Folder' : 'New Subfolder',
       initial: '',
       mode: group.mode,
     );
@@ -415,30 +686,45 @@ class _SidebarState extends State<Sidebar> {
     final header = MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => state.toggleGroup(group.id),
+        onTap: () {
+          state.selectTreeNode('group', group.id);
+          state.toggleGroup(group.id);
+        },
+        onSecondaryTapDown: (details) => _showMenu(
+          details.globalPosition,
+          _groupMenuItems(group, isWs),
+          (value) => _handleGroupAction(state, group, value),
+        ),
         child: Container(
-          margin: const EdgeInsets.only(top: 4, bottom: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          margin: EdgeInsets.only(top: 4, bottom: 3),
+          padding: EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          decoration: BoxDecoration(
+            color: state.selectedNodeKind == 'group' &&
+                    state.selectedNodeId == group.id
+                ? AstraColors.overlay
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Row(
             children: [
               AnimatedRotation(
                 turns: group.expanded ? 0.25 : 0,
-                duration: const Duration(milliseconds: 150),
-                child: const Icon(Icons.chevron_right, size: 14, color: AstraColors.faint),
+                duration: Duration(milliseconds: 150),
+                child: Icon(Icons.chevron_right, size: 14, color: AstraColors.faint),
               ),
-              const SizedBox(width: 3),
+              SizedBox(width: 3),
               Icon(
                 isWs ? Icons.folder_special_outlined : Icons.folder_outlined,
                 size: 14,
                 color: AstraColors.accent.withValues(alpha: 0.8),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(
                   group.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: AstraColors.text,
@@ -447,103 +733,10 @@ class _SidebarState extends State<Sidebar> {
               ),
               Text(
                 '$total',
-                style: const TextStyle(fontSize: 10, color: AstraColors.faint),
+                style: TextStyle(fontSize: 10, color: AstraColors.faint),
               ),
-              const SizedBox(width: 2),
-              _MenuButton(
-                tooltip: '集合操作',
-                onSelected: (value) async {
-                  if (value == 'api') {
-                    state.newRequestIn(group.id, '');
-                  } else if (value == 'folder') {
-                    await _createFolder(state, group, '');
-                  } else if (value == 'rename') {
-                    final name = await showGroupDialog(
-                      context,
-                      title: '重命名集合',
-                      initial: group.name,
-                      mode: group.mode,
-                    );
-                    if (name != null) state.renameGroup(group.id, name);
-                  } else if (value == 'variables') {
-                    await showScopeVariablesDialog(
-                      context,
-                      state,
-                      title: '集合变量 · ${group.name}',
-                      rows: group.variables,
-                      onSave: (rows) => state.setCollectionVariables(group.id, rows),
-                    );
-                  } else if (value == 'auth') {
-                    await showScopeAuthDialog(
-                      context,
-                      title: '集合认证 · ${group.name}',
-                      current: group.auth,
-                      onSave: (auth) => state.setCollectionAuth(group.id, auth),
-                    );
-                  } else if (value == 'monitor') {
-                    await showMonitorsDialog(context, state, group);
-                  } else if (value == 'duplicate') {
-                    final copy = state.duplicateGroup(group.id);
-                    if (copy != null) state.showToast('已复制为「${copy.name}」');
-                  } else if (value == 'delete') {
-                    final ok = await showConfirmDialog(
-                      context,
-                      title: '删除集合',
-                      message:
-                          '删除「${group.name}」后，集合内的所有${isWs ? '连接' : '请求'}与文件夹都会被一并删除，此操作不可撤销。',
-                    );
-                    if (ok) state.deleteGroup(group.id);
-                  }
-                },
-                items: [
-                  PopupMenuItem<String>(
-                    value: 'api',
-                    height: 36,
-                    child: Text(
-                      isWs ? '新建连接' : '新建请求',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'folder',
-                    height: 36,
-                    child: Text('新建文件夹', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'variables',
-                    height: 36,
-                    child: Text('集合变量', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'auth',
-                    height: 36,
-                    child: Text('集合认证', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'monitor',
-                    height: 36,
-                    child: Text('定时监控', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'duplicate',
-                    height: 36,
-                    child: Text('复制集合', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'rename',
-                    height: 36,
-                    child: Text('重命名', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    height: 36,
-                    child: Text(
-                      '删除集合',
-                      style: TextStyle(fontSize: 12, color: AstraColors.err),
-                    ),
-                  ),
-                ],
-              ),
+              SizedBox(width: 2),
+              Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
             ],
           ),
         ),
@@ -576,128 +769,58 @@ class _SidebarState extends State<Sidebar> {
     final header = MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => state.toggleFolder(folder.id),
+        onTap: () {
+          state.selectTreeNode('folder', folder.id);
+          state.toggleFolder(folder.id);
+        },
+        onSecondaryTapDown: (details) => _showMenu(
+          details.globalPosition,
+          _folderMenuItems(isWs == true),
+          (value) => _handleFolderAction(state, group, folder, value),
+        ),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 2),
+          margin: EdgeInsets.only(bottom: 2),
           padding: EdgeInsets.only(
             left: 8 + depth * 12.0,
             right: 6,
             top: 6,
             bottom: 6,
           ),
+          decoration: BoxDecoration(
+            color: state.selectedNodeKind == 'folder' &&
+                    state.selectedNodeId == folder.id
+                ? AstraColors.overlay
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Row(
             children: [
               AnimatedRotation(
                 turns: folder.expanded ? 0.25 : 0,
-                duration: const Duration(milliseconds: 150),
-                child: const Icon(Icons.chevron_right, size: 13, color: AstraColors.faint),
+                duration: Duration(milliseconds: 150),
+                child: Icon(Icons.chevron_right, size: 13, color: AstraColors.faint),
               ),
-              const SizedBox(width: 2),
+              SizedBox(width: 2),
               Icon(
                 folder.expanded ? Icons.folder_open_outlined : Icons.folder_outlined,
                 size: 13,
                 color: AstraColors.muted,
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(
                   folder.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.3, color: AstraColors.muted),
+                  style: TextStyle(fontSize: 11.3, color: AstraColors.muted),
                 ),
               ),
               Text(
                 '$total',
-                style: const TextStyle(fontSize: 9.5, color: AstraColors.faint),
+                style: TextStyle(fontSize: 9.5, color: AstraColors.faint),
               ),
-              const SizedBox(width: 2),
-              _MenuButton(
-                tooltip: '文件夹操作',
-                onSelected: (value) async {
-                  if (value == 'api') {
-                    state.newRequestIn(folder.groupId, folder.id);
-                  } else if (value == 'folder') {
-                    if (group != null) await _createFolder(state, group, folder.id);
-                  } else if (value == 'rename') {
-                    final name = await showGroupDialog(
-                      context,
-                      title: '重命名文件夹',
-                      initial: folder.name,
-                      mode: group?.mode ?? 'http',
-                    );
-                    if (name != null) state.renameFolder(folder.id, name);
-                  } else if (value == 'variables') {
-                    await showScopeVariablesDialog(
-                      context,
-                      state,
-                      title: '文件夹变量 · ${folder.name}',
-                      rows: folder.variables,
-                      onSave: (rows) => state.setFolderVariables(folder.id, rows),
-                    );
-                  } else if (value == 'auth') {
-                    await showScopeAuthDialog(
-                      context,
-                      title: '文件夹认证 · ${folder.name}',
-                      current: folder.auth,
-                      onSave: (auth) => state.setFolderAuth(folder.id, auth),
-                    );
-                  } else if (value == 'duplicate') {
-                    final copy = state.duplicateFolder(folder.id);
-                    if (copy != null) state.showToast('已复制为「${copy.name}」');
-                  } else if (value == 'delete') {
-                    final ok = await showConfirmDialog(
-                      context,
-                      title: '删除文件夹',
-                      message: '删除「${folder.name}」后，其中的所有${isWs ? '连接' : '请求'}与子文件夹都会被一并删除，此操作不可撤销。',
-                    );
-                    if (ok) state.deleteFolder(folder.id);
-                  }
-                },
-                items: [
-                  PopupMenuItem<String>(
-                    value: 'api',
-                    height: 36,
-                    child: Text(
-                      isWs ? '新建连接' : '新建请求',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'folder',
-                    height: 36,
-                    child: Text('新建子文件夹', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'variables',
-                    height: 36,
-                    child: Text('文件夹变量', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'auth',
-                    height: 36,
-                    child: Text('文件夹认证', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'duplicate',
-                    height: 36,
-                    child: Text('复制文件夹', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'rename',
-                    height: 36,
-                    child: Text('重命名', style: TextStyle(fontSize: 12)),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    height: 36,
-                    child: Text(
-                      '删除文件夹',
-                      style: TextStyle(fontSize: 12, color: AstraColors.err),
-                    ),
-                  ),
-                ],
-              ),
+              SizedBox(width: 2),
+              Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
             ],
           ),
         ),
@@ -735,8 +858,8 @@ class _SidebarState extends State<Sidebar> {
       active: tab.id == state.activeTabId,
       indent: depth * 12.0,
       method: isWs ? 'WS' : tab.request.method,
-      name: '${tab.name}（草稿）',
-      url: '未保存 · 按 ⌘ / Ctrl + S 保存',
+      name: '${tab.name} (Draft)',
+      url: 'Unsaved · Press ⌘ / Ctrl + S to save',
       onTap: () => state.activateTab(tab.id),
       onDelete: () => state.closeTab(tab.id),
     );
@@ -750,12 +873,15 @@ class _SidebarState extends State<Sidebar> {
       name: entry.name,
       url: entry.mode == 'ws' ? (entry.ws?.url ?? '') : (entry.request?.url ?? ''),
       tooltip: entry.description.isEmpty ? null : entry.description,
-      onTap: () => state.openEntry(entry),
+      onTap: () {
+        state.selectTreeNode('entry', entry.id);
+        state.openEntry(entry);
+      },
       onDelete: () async {
         final ok = await showConfirmDialog(
           context,
-          title: '删除${entry.mode == 'ws' ? '连接' : '请求'}',
-          message: '确定删除「${entry.name}」吗？此操作不可撤销。',
+          title: 'Delete ${entry.mode == 'ws' ? 'Connection' : 'Request'}',
+          message: 'Delete "${entry.name}"? This cannot be undone.',
         );
         if (ok) state.deleteEntry(entry.id);
       },
@@ -766,7 +892,7 @@ class _SidebarState extends State<Sidebar> {
             break;
           case 'duplicate':
             final copy = state.duplicateEntry(entry.id);
-            if (copy != null) state.showToast('已复制为「${copy.name}」');
+            if (copy != null) state.showToast('Copied as "${copy.name}"');
             break;
           case 'move':
             await showMoveEntryDialog(context, state, entry.id);
@@ -774,13 +900,30 @@ class _SidebarState extends State<Sidebar> {
           case 'examples':
             await showExamplesDialog(context, state, entry.id);
             break;
+          case 'delete':
+            final ok = await showConfirmDialog(
+              context,
+              title: 'Delete ${entry.mode == 'ws' ? 'Connection' : 'Request'}',
+              message: 'Delete "${entry.name}"? This cannot be undone.',
+            );
+            if (ok) state.deleteEntry(entry.id);
+            break;
         }
       },
       menuItems: [
-        const PopupMenuItem(value: 'meta', height: 36, child: Text('重命名 / 备注')),
-        const PopupMenuItem(value: 'duplicate', height: 36, child: Text('复制请求')),
-        const PopupMenuItem(value: 'move', height: 36, child: Text('移动到…')),
-        const PopupMenuItem(value: 'examples', height: 36, child: Text('响应示例')),
+        PopupMenuItem(value: 'meta', height: 36, child: Text('Rename / Notes')),
+        PopupMenuItem(value: 'duplicate', height: 36, child: Text('Duplicate')),
+        PopupMenuItem(value: 'move', height: 36, child: Text('Move to…')),
+        PopupMenuItem(value: 'examples', height: 36, child: Text('Saved Examples')),
+        PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'delete',
+          height: 36,
+          child: Text(
+            'Delete ${entry.mode == 'ws' ? 'Connection' : 'Request'}',
+            style: TextStyle(color: AstraColors.err),
+          ),
+        ),
       ],
     );
 
@@ -794,7 +937,7 @@ class _SidebarState extends State<Sidebar> {
       builder: (context, candidate, rejected) => Container(
         decoration: candidate.isEmpty
             ? null
-            : const BoxDecoration(
+            : BoxDecoration(
                 border: Border(top: BorderSide(color: AstraColors.accent, width: 1.5)),
               ),
         child: LongPressDraggable<String>(
@@ -812,19 +955,19 @@ class _SidebarState extends State<Sidebar> {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: AstraColors.surface2,
           border: Border.all(color: AstraColors.accent),
           borderRadius: BorderRadius.circular(8),
-          boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 12)],
+          boxShadow: [BoxShadow(color: Color(0x55000000), blurRadius: 12)],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             MethodBadge(method: method),
-            const SizedBox(width: 8),
-            Text(name, style: const TextStyle(fontSize: 11.5, color: AstraColors.text)),
+            SizedBox(width: 8),
+            Text(name, style: TextStyle(fontSize: 11.5, color: AstraColors.text)),
           ],
         ),
       ),
@@ -834,14 +977,14 @@ class _SidebarState extends State<Sidebar> {
   Widget _historyList(AppState state) {
     final items = state.historyFor(state.mode);
     if (items.isEmpty) {
-      return const EmptyHint(
+      return EmptyHint(
         icon: Icons.history_rounded,
-        title: '暂无历史记录',
-        subtitle: '每次发送请求后，\n这里会保留最近 80 条记录',
+        title: 'No history yet',
+        subtitle: 'After you send a request,\nthe latest 80 entries will be kept here',
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+      padding: EdgeInsets.fromLTRB(10, 4, 10, 12),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final entry = items[index];
@@ -854,34 +997,6 @@ class _SidebarState extends State<Sidebar> {
           onDelete: () => state.deleteHistoryEntry(entry.id),
         );
       },
-    );
-  }
-}
-
-class _MenuButton extends StatelessWidget {
-  final String tooltip;
-  final ValueChanged<String> onSelected;
-  final List<PopupMenuEntry<String>> items;
-
-  const _MenuButton({
-    required this.tooltip,
-    required this.onSelected,
-    required this.items,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: PopupMenuButton<String>(
-        tooltip: tooltip,
-        padding: EdgeInsets.zero,
-        color: AstraColors.surface2,
-        onSelected: onSelected,
-        itemBuilder: (ctx) => items,
-        child: const Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
-      ),
     );
   }
 }
@@ -899,7 +1014,7 @@ class _SideItem extends StatefulWidget {
   final ValueChanged<String>? onMenuSelected;
   final List<PopupMenuEntry<String>>? menuItems;
 
-  const _SideItem({
+  _SideItem({
     required this.active,
     required this.method,
     required this.name,
@@ -920,6 +1035,22 @@ class _SideItem extends StatefulWidget {
 class _SideItemState extends State<_SideItem> {
   bool _hover = false;
 
+  Future<void> _showMenu(Offset position) async {
+    final items = widget.menuItems;
+    if (items == null) return;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      color: AstraColors.surface2,
+      items: items,
+    );
+    if (selected != null) widget.onMenuSelected?.call(selected);
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = MouseRegion(
@@ -928,19 +1059,22 @@ class _SideItemState extends State<_SideItem> {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: widget.onTap,
+        onSecondaryTapDown: widget.menuItems == null
+            ? null
+            : (details) => _showMenu(details.globalPosition),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 130),
-          margin: const EdgeInsets.only(bottom: 3),
+          duration: Duration(milliseconds: 130),
+          margin: EdgeInsets.only(bottom: 3),
           padding: EdgeInsets.fromLTRB(9 + widget.indent, 8, 9, 8),
           decoration: BoxDecoration(
             color: widget.active
-                ? const Color(0x1238BDF8)
+                ? AstraColors.accentSoft
                 : _hover
-                    ? const Color(0x0AFFFFFF)
+                    ? AstraColors.overlay
                     : Colors.transparent,
             border: Border.all(
               color: widget.active
-                  ? const Color(0x3338BDF8)
+                  ? AstraColors.accentBorder
                   : _hover
                       ? AstraColors.line
                       : Colors.transparent,
@@ -950,7 +1084,7 @@ class _SideItemState extends State<_SideItem> {
           child: Row(
             children: [
               MethodBadge(method: widget.method),
-              const SizedBox(width: 9),
+              SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,10 +1093,10 @@ class _SideItemState extends State<_SideItem> {
                       widget.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: AstraColors.text),
+                      style: TextStyle(fontSize: 12, color: AstraColors.text),
                     ),
                     if (widget.url.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         widget.url,
                         maxLines: 1,
@@ -975,29 +1109,21 @@ class _SideItemState extends State<_SideItem> {
               ),
               if (_hover || widget.active) ...[
                 if (widget.menuItems != null)
-                  SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: PopupMenuButton<String>(
-                      tooltip: '更多操作',
-                      padding: EdgeInsets.zero,
-                      color: AstraColors.surface2,
-                      onSelected: widget.onMenuSelected,
-                      itemBuilder: (ctx) => widget.menuItems!,
-                      child: const Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
-                    ),
-                  ),
-                if (!widget.hideDelete)
+                  Padding(
+                    padding: EdgeInsets.only(left: 4, right: 2),
+                    child: Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
+                  )
+                else if (!widget.hideDelete)
                   SizedBox(
                     width: 24,
                     child: IconButton(
                       onPressed: widget.onDelete,
                       padding: EdgeInsets.zero,
                       iconSize: 14,
-                      tooltip: '删除',
+                      tooltip: 'Close',
                       color: AstraColors.faint,
-                      highlightColor: const Color(0x1AFB7185),
-                      icon: const Icon(Icons.close),
+                      highlightColor: AstraColors.errSoft,
+                      icon: Icon(Icons.close),
                     ),
                   ),
               ],
@@ -1010,7 +1136,7 @@ class _SideItemState extends State<_SideItem> {
     if (widget.tooltip == null) return content;
     return Tooltip(
       message: widget.tooltip!,
-      waitDuration: const Duration(milliseconds: 600),
+      waitDuration: Duration(milliseconds: 600),
       child: content,
     );
   }
@@ -1019,15 +1145,15 @@ class _SideItemState extends State<_SideItem> {
 class _SearchSectionLabel extends StatelessWidget {
   final String text;
 
-  const _SearchSectionLabel(this.text);
+  _SearchSectionLabel(this.text);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 5),
+      padding: EdgeInsets.fromLTRB(8, 10, 8, 5),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
+        style: TextStyle(fontSize: 10, color: AstraColors.faint, letterSpacing: 0.6),
       ),
     );
   }
@@ -1041,7 +1167,7 @@ class _HistoryItem extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
-  const _HistoryItem({
+  _HistoryItem({
     required this.entry,
     required this.selectMode,
     required this.selected,
@@ -1067,13 +1193,13 @@ class _HistoryItemState extends State<_HistoryItem> {
       child: GestureDetector(
         onTap: widget.selectMode ? widget.onToggle : widget.onTap,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          margin: EdgeInsets.only(bottom: 3),
+          padding: EdgeInsets.symmetric(horizontal: 9, vertical: 8),
           decoration: BoxDecoration(
             color: widget.selected
-                ? const Color(0x1438BDF8)
+                ? AstraColors.accentSoft
                 : _hover
-                    ? const Color(0x0AFFFFFF)
+                    ? AstraColors.overlay
                     : Colors.transparent,
             border: Border.all(
               color: widget.selected
@@ -1094,15 +1220,15 @@ class _HistoryItemState extends State<_HistoryItem> {
                     value: widget.selected,
                     onChanged: (_) => widget.onToggle(),
                     activeColor: AstraColors.accent,
-                    side: const BorderSide(color: AstraColors.lineStrong, width: 1),
+                    side: BorderSide(color: AstraColors.lineStrong, width: 1),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
               ],
               MethodBadge(method: entry.method),
-              const SizedBox(width: 9),
+              SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1113,7 +1239,7 @@ class _HistoryItemState extends State<_HistoryItem> {
                       overflow: TextOverflow.ellipsis,
                       style: monoStyle(size: 10.5, color: AstraColors.muted),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Row(
                       children: [
                         Container(
@@ -1124,23 +1250,23 @@ class _HistoryItemState extends State<_HistoryItem> {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        SizedBox(width: 5),
                         Text(
-                          entry.status == null ? '失败' : '${entry.status}',
+                          entry.status == null ? 'Failed' : '${entry.status}',
                           style: TextStyle(
                             fontSize: 9.5,
                             color: statusColor(entry.status),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           '${entry.ms} ms',
-                          style: const TextStyle(fontSize: 9.5, color: AstraColors.faint),
+                          style: TextStyle(fontSize: 9.5, color: AstraColors.faint),
                         ),
-                        const Spacer(),
+                        Spacer(),
                         Text(
                           formatTime(entry.ts),
-                          style: const TextStyle(fontSize: 9.5, color: AstraColors.faint),
+                          style: TextStyle(fontSize: 9.5, color: AstraColors.faint),
                         ),
                       ],
                     ),
@@ -1148,12 +1274,12 @@ class _HistoryItemState extends State<_HistoryItem> {
                 ),
               ),
               if (!widget.selectMode && _hover) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 SizedBox(
                   width: 20,
                   height: 20,
                   child: IconButton(
-                    tooltip: '删除该条历史',
+                    tooltip: 'Delete this history entry',
                     padding: EdgeInsets.zero,
                     iconSize: 13,
                     color: AstraColors.faint,

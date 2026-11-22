@@ -136,7 +136,7 @@ class HttpService {
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.host.isEmpty) {
-      throw HttpFailure('请求地址格式无效');
+      throw HttpFailure('Invalid request URL');
     }
 
     final client = _createClient(rejectUnauthorized, settings);
@@ -220,15 +220,15 @@ class HttpService {
     } on HttpFailure {
       rethrow;
     } on SocketException catch (err) {
-      throw HttpFailure('无法连接：${err.message}');
+      throw HttpFailure('Cannot connect: ${err.message}');
     } on HandshakeException catch (err) {
-      throw HttpFailure('TLS 握手失败：${err.message}');
+      throw HttpFailure('TLS handshake failed: ${err.message}');
     } on FormatException catch (err) {
-      throw HttpFailure('地址解析失败：${err.message}');
+      throw HttpFailure('Failed to resolve address: ${err.message}');
     } on TimeoutException {
-      throw HttpFailure('请求超时');
+      throw HttpFailure('Request timed out');
     } catch (err) {
-      throw HttpFailure('请求失败：$err');
+      throw HttpFailure('Request failed: $err');
     } finally {
       client.close(force: true);
     }
@@ -302,7 +302,7 @@ class HttpService {
   }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.host.isEmpty) {
-      throw HttpFailure('请求地址格式无效');
+      throw HttpFailure('Invalid request URL');
     }
     final client = _createClient(rejectUnauthorized, settings);
     try {
@@ -374,7 +374,7 @@ class HttpService {
       );
     } catch (err) {
       client.close(force: true);
-      throw HttpFailure('SSE 连接失败：$err');
+      throw HttpFailure('SSE connection failed: $err');
     }
   }
 
@@ -482,7 +482,7 @@ String decodeGrpcFrames(Uint8List bytes) {
     final end = start + length;
     if (end > bytes.length || length < 0) break;
     final payload = bytes.sublist(start, end);
-    buffer.writeln('— 帧 $index · ${trailer ? 'trailer' : 'message'} · $length 字节 —');
+    buffer.writeln('— Frame $index · ${trailer ? 'trailer' : 'message'} · $length bytes —');
     if (trailer) {
       buffer.writeln(latin1.decode(payload, allowInvalid: true).trim());
     } else {
@@ -496,8 +496,8 @@ String decodeGrpcFrames(Uint8List bytes) {
     offset = end;
   }
   if (offset < bytes.length) {
-    buffer.writeln('[剩余 ${bytes.length - offset} 字节未能按 gRPC 帧解析]');
+    buffer.writeln('[${bytes.length - offset} remaining bytes could not be parsed as gRPC frames]');
     buffer.writeln('base64: ${base64Encode(bytes.sublist(offset))}');
   }
-  return buffer.isEmpty ? '(空响应)' : buffer.toString();
+  return buffer.isEmpty ? '(empty response)' : buffer.toString();
 }

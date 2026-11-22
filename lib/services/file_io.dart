@@ -46,28 +46,28 @@ class PickedJson {
 /// 选择并解析 JSON 文件；返回 null 表示用户取消。
 Future<PickedJson?> pickJsonFile() async {
   final file = await FilePicker.pickFile(
-    dialogTitle: '选择导入文件',
+    dialogTitle: 'Select Import File',
     type: FileType.custom,
     allowedExtensions: ['json'],
   );
   if (file == null) return null;
 
   final bytes = await file.readAsBytes().catchError((err) {
-    throw FormatException('无法读取所选文件，请确认文件可访问后重试（$err）');
+    throw FormatException('Unable to read the selected file. Make sure it is accessible and try again ($err)');
   });
   final text = utf8.decode(bytes, allowMalformed: true);
   final trimmed = text.trimLeft();
   if (!trimmed.startsWith('{')) {
-    throw const FormatException('暂不支持 YAML 或非 JSON 文件，请先转换为 JSON 后导入');
+    throw const FormatException('YAML and other non-JSON files are not supported. Convert to JSON before importing');
   }
   dynamic decoded;
   try {
     decoded = jsonDecode(text);
   } catch (err) {
-    throw FormatException('JSON 解析失败：$err');
+    throw FormatException('Failed to parse JSON: $err');
   }
   if (decoded is! Map) {
-    throw const FormatException('文件内容不是有效的对象结构');
+    throw const FormatException('File content is not a valid object structure');
   }
   return PickedJson(file.name, Map<String, dynamic>.from(decoded));
 }
@@ -78,7 +78,7 @@ Future<String?> saveJsonFile(String suggestedName, Map<String, dynamic> data) as
     utf8.encode(const JsonEncoder.withIndent('  ').convert(data)),
   );
   final uri = await FilePicker.saveFile(
-    dialogTitle: '导出',
+    dialogTitle: 'Export',
     fileName: suggestedName,
     mimeType: 'application/json',
     bytes: bytes,
@@ -91,7 +91,7 @@ Future<String?> saveJsonFile(String suggestedName, Map<String, dynamic> data) as
 /// 保存任意二进制内容（响应体下载）；返回保存路径，取消时返回 null。
 Future<String?> saveBytesFile(String suggestedName, Uint8List bytes, String mime) async {
   final uri = await FilePicker.saveFile(
-    dialogTitle: '保存响应内容',
+    dialogTitle: 'Save Response Body',
     fileName: suggestedName,
     mimeType: mime,
     bytes: bytes,
@@ -104,7 +104,7 @@ Future<String?> saveBytesFile(String suggestedName, Uint8List bytes, String mime
 /// 选择 multipart 上传文件。
 Future<UploadFile?> pickUploadFile() async {
   final file = await FilePicker.pickFile(
-    dialogTitle: '选择上传文件',
+    dialogTitle: 'Select Upload File',
     type: FileType.any,
   );
   if (file == null) return null;

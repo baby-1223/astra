@@ -2,30 +2,56 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../services/file_io.dart';
 import '../state.dart';
-import 'bound_text_field.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// 集合运行器：按顺序执行集合内的 HTTP 请求，支持重复、数据驱动与报告导出。
+/// Collection runner: executes the HTTP requests of a collection or folder in
+/// order, with iterations, delays, data files and an exportable report.
 Future<void> showRunnerDialog(
   BuildContext context,
   AppState state, {
   String? groupId,
+  String? folderId,
 }) async {
-  var tab = 0;
   var selectedGroup = groupId ??
       (state.groups.where((item) => item.mode == 'http').firstOrNull?.id ?? '');
-  final iterations = TextEditingController(text: '1');
-  final data = TextEditingController();
+  var selectedFolder = folderId ?? '';
+  var iterationFilter = -1;
+  var sortColumn = -1;
+  var sortAscending = true;
+  var failuresHeight = 150.0;
   var dataName = '';
-  var stopOnError = false;
+  var continueOnFailure = true;
+  final iterationsController = TextEditingController(text: '1');
+  final delayController = TextEditingController(text: '0');
+  final dataController = TextEditingController();
+
+  Future<void> startRun(CollectionGroup? group, List<Map<String, String>> rows) async {
+    if (state.runningCollection || group == null) return;
+    try {
+      await state.runCollection(
+        groupId: group.id,
+        folderId: selectedFolder,
+        iterations: rows.isNotEmpty
+            ? rows.length
+            : (int.tryParse(iterationsController.text) ?? 1),
+        delayMs: int.tryParse(delayController.text) ?? 0,
+        dataRows: rows,
+        stopOnError: !continueOnFailure,
+      );
+    } catch (err) {
+      state.showToast('$err');
+    }
+  }
 
   await showDialog<void>(
     context: context,
+    barrierDismissible: false,
     builder: (ctx) => AnimatedBuilder(
       animation: state,
       builder: (ctx, _) => StatefulBuilder(
@@ -33,619 +59,886 @@ Future<void> showRunnerDialog(
           final groups = state.groupsFor('http');
           final group = groups.where((item) => item.id == selectedGroup).firstOrNull ??
               groups.firstOrNull;
-          final entries =
-              group == null ? <CollectionEntry>[] : state.runnerEntries(group.id);
-          final report = state.lastReport;
+          final entries = group == null
+              ? <CollectionEntry>[]
+              : state.runnerEntries(group.id, folderId: selectedFolder);
+          final parsedData = _parseData(dataController.text);
+          final steps = List<RunStepResult>.from(state.runSteps);
+          if (sortColumn >= 0) {
+            steps.sort((a, b) {
+              final result = _compareSteps(a, b, sortColumn);
+              return sortAscending ? result : -result;
+            });
+          }
+          final visible = iterationFilter < 0
+              ? steps
+              : steps.where((step) => step.iteration == iterationFilter).toList();
+          final failures = steps.where((step) => !step.passed).toList();
+          final summary = _summaryOf(steps);
+          final running = state.runningCollection;
 
           return AstraDialogShell(
-          title: '集合运行器',
-          subtitle: '按集合层级顺序执行请求，可使用 CSV / JSON 数据文件驱动多轮运行。',
-          width: 920,
-          child: SizedBox(
-            height: 500,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 215,
-                  child: groups.isEmpty
-                      ? const Text(
-                          '还没有 HTTP 集合，先在侧栏创建并添加请求。',
-                          style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
-                        )
-                      : ListView.builder(
-                          itemCount: groups.length,
-                          itemBuilder: (context, index) {
-                            final item = groups[index];
-                            final active = item.id == group?.id;
-                            final count = state.runnerEntries(item.id).length;
-                            return InkWell(
-                              onTap: () => setLocal(() {
-                                selectedGroup = item.id;
-                              }),
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 6),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 9,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? const Color(0x1638BDF8)
-                                      : const Color(0x06FFFFFF),
-                                  border: Border.all(
-                                    color: active
-                                        ? const Color(0x4038BDF8)
-                                        : AstraColors.line,
-                                  ),
-                                  borderRadius: BorderRadius.circular(9),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: active
-                                              ? AstraColors.accent
-                                              : AstraColors.text,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '$count',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AstraColors.faint,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
+            title: group == null ? 'Collection Runner' : 'Run ${group.name}',
+            subtitle:
+                'Requests run in collection order. Use a CSV or JSON data file to drive one iteration per row.',
+            width: 1080,
+            child: CallbackShortcuts(
+              bindings: {
+                SingleActivator(LogicalKeyboardKey.enter, meta: true): () =>
+                    startRun(group, parsedData),
+                SingleActivator(LogicalKeyboardKey.enter, control: true): () =>
+                    startRun(group, parsedData),
+                SingleActivator(LogicalKeyboardKey.escape): () {
+                  if (state.runningCollection) state.stopRunner();
+                  Navigator.of(ctx).pop();
+                },
+              },
+              child: Focus(
+                autofocus: true,
+                child: SizedBox(
+                  height: 600,
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          AstraTabs(
-                            items: const [
-                              AstraTabItem('setup', '运行设置'),
-                              AstraTabItem('report', '运行报告'),
-                              AstraTabItem('monitor', '定时监控'),
-                            ],
-                            selected: ['setup', 'report', 'monitor'][tab],
-                            compact: true,
-                            onSelect: (id) => setLocal(
-                              () => tab = ['setup', 'report', 'monitor'].indexOf(id),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (group != null)
-                            Text(
-                              '${entries.length} 个请求',
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                color: AstraColors.faint,
+                      SizedBox(
+                        width: 215,
+                        child: groups.isEmpty
+                            ? Text(
+                                'No HTTP collections yet. Create one in the sidebar first.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: AstraColors.faint,
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: groups.length,
+                                itemBuilder: (context, index) {
+                                  final item = groups[index];
+                                  final active = item.id == group?.id;
+                                  final count =
+                                      state.runnerEntries(item.id).length;
+                                  return InkWell(
+                                    onTap: () => setLocal(() {
+                                      selectedGroup = item.id;
+                                      selectedFolder = '';
+                                      iterationFilter = -1;
+                                    }),
+                                    child: Container(
+                                      margin: EdgeInsets.only(bottom: 6),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 9,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: active
+                                            ? AstraColors.accentSoft
+                                            : AstraColors.overlay,
+                                        border: Border.all(
+                                          color: active
+                                              ? AstraColors.accentBorder
+                                              : AstraColors.line,
+                                        ),
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: active
+                                                    ? AstraColors.accent
+                                                    : AstraColors.text,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            '$count',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: AstraColors.faint,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                            ),
-                        ],
                       ),
-                      const Divider(height: 14),
+                      SizedBox(width: 16),
                       Expanded(
-                        child: switch (tab) {
-                          0 => _setupPane(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _configBar(
                               ctx: ctx,
                               state: state,
                               group: group,
                               entries: entries,
-                              iterations: iterations,
-                              data: data,
+                              running: running,
+                              iterationsController: iterationsController,
+                              delayController: delayController,
+                              dataRows: parsedData,
                               dataName: dataName,
-                              stopOnError: stopOnError,
-                              onDataName: (name) => dataName = name,
-                              onStopOnError: (value) => stopOnError = value,
+                              dataLocked: parsedData.isNotEmpty,
+                              continueOnFailure: continueOnFailure,
+                              onContinueChanged: (value) =>
+                                  setLocal(() => continueOnFailure = value),
+                              onDataLoaded: (name) =>
+                                  setLocal(() => dataName = name),
+                              onDataCleared: () => setLocal(() {
+                                dataController.clear();
+                                dataName = '';
+                              }),
+                              dataController: dataController,
                             ),
-                          1 => _reportPane(state, report),
-                          _ => _monitorPane(ctx, state, group),
-                        },
+                            SizedBox(height: 12),
+                            _summaryCards(summary),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  'Filter',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: AstraColors.muted,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                DropdownButton<int>(
+                                  value: iterationFilter,
+                                  dropdownColor: AstraColors.surface2,
+                                  underline: SizedBox.shrink(),
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: AstraColors.text,
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: -1,
+                                      child: Text('All Iterations'),
+                                    ),
+                                    for (final iteration in _iterationsOf(steps))
+                                      DropdownMenuItem(
+                                        value: iteration,
+                                        child: Text('Iteration $iteration'),
+                                      ),
+                                  ],
+                                  onChanged: (value) => setLocal(
+                                    () => iterationFilter = value ?? -1,
+                                  ),
+                                ),
+                                Spacer(),
+                                Text(
+                                  running
+                                      ? state.runnerProgress
+                                      : (steps.isEmpty
+                                          ? 'Ready'
+                                          : '${steps.length} request(s)'),
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: AstraColors.faint,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Expanded(
+                              flex: 3,
+                              child: _resultsSection(
+                                visible: visible,
+                                hasAny: steps.isNotEmpty,
+                                sortColumn: sortColumn,
+                                sortAscending: sortAscending,
+                                onSort: (index) => setLocal(() {
+                                  if (sortColumn == index) {
+                                    sortAscending = !sortAscending;
+                                  } else {
+                                    sortColumn = index;
+                                    sortAscending = true;
+                                  }
+                                }),
+                              ),
+                            ),
+                            MouseRegion(
+                              cursor: SystemMouseCursors.resizeUpDown,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onVerticalDragUpdate: (details) => setLocal(() {
+                                  failuresHeight = (failuresHeight -
+                                          details.delta.dy)
+                                      .clamp(90.0, 360.0);
+                                }),
+                                child: Container(
+                                  height: 9,
+                                  alignment: Alignment.center,
+                                  child: Container(
+                                    height: 1,
+                                    color: AstraColors.line,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: failuresHeight,
+                              child: _failuresSection(failures),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          actions: [
-            if (state.runningCollection)
-              Text(
-                state.runnerProgress,
-                style: const TextStyle(fontSize: 10.5, color: AstraColors.muted),
               ),
-            const Spacer(),
-            GhostButton(
-              label: '关闭',
-              onPressed: () => Navigator.of(ctx).pop(),
             ),
-          ],
-        );
+            actions: [
+              GhostButton(
+                label: 'Export Report',
+                icon: Icons.download_outlined,
+                onPressed: steps.isEmpty || running
+                    ? null
+                    : () async {
+                        final path = await saveJsonFile(
+                          'astra-runner-'
+                          '${(group?.name ?? 'collection').replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '-')}-'
+                          '${DateTime.now().millisecondsSinceEpoch}.json',
+                          {
+                            'name': group?.name ?? 'Collection',
+                            'exportedAt': DateTime.now().toIso8601String(),
+                            'summary': {
+                              'totalRuns': summary.totalRuns,
+                              'passedTests': summary.passedTests,
+                              'failedTests': summary.failedTests,
+                              'failedRequests': summary.failedRequests,
+                              'durationMs': summary.durationMs,
+                              'averageResponseMs': summary.averageMs,
+                              'responseSizeBytes': summary.responseBytes,
+                            },
+                            'results': [
+                              for (final step in steps)
+                                {
+                                  'iteration': step.iteration,
+                                  'request': step.name,
+                                  'method': step.method,
+                                  'status': step.status,
+                                  'timeMs': step.ms,
+                                  'passed': step.passed,
+                                  'error': step.error,
+                                  'failures': step.failures,
+                                },
+                            ],
+                            'failures': [
+                              for (final step in failures)
+                                {
+                                  'iteration': step.iteration,
+                                  'request': step.name,
+                                  'status': step.status,
+                                  'reason': _failureReason(step),
+                                },
+                            ],
+                          },
+                        );
+                        if (path != null) state.showToast('Report exported');
+                      },
+              ),
+              SizedBox(width: 8),
+              GhostButton(
+                label: 'Stop',
+                icon: Icons.stop_circle_outlined,
+                onPressed: running ? state.stopRunner : null,
+              ),
+              SizedBox(width: 8),
+              GradientButton(
+                label: 'Run',
+                icon: Icons.play_arrow_rounded,
+                onPressed: running || group == null
+                    ? null
+                    : () => startRun(group, parsedData),
+              ),
+              SizedBox(width: 8),
+              GhostButton(
+                label: 'Close',
+                onPressed: () {
+                  if (state.runningCollection) state.stopRunner();
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            ],
+          );
         },
       ),
     ),
   );
+
+  iterationsController.dispose();
+  delayController.dispose();
+  dataController.dispose();
 }
 
-Widget _setupPane({
+class _RunSummary {
+  final int totalRuns;
+  final int passedTests;
+  final int failedTests;
+  final int failedRequests;
+  final int durationMs;
+  final int averageMs;
+  final int responseBytes;
+
+  _RunSummary({
+    required this.totalRuns,
+    required this.passedTests,
+    required this.failedTests,
+    required this.failedRequests,
+    required this.durationMs,
+    required this.averageMs,
+    required this.responseBytes,
+  });
+}
+
+_RunSummary _summaryOf(List<RunStepResult> steps) {
+  var passedTests = 0;
+  var failedTests = 0;
+  var failedRequests = 0;
+  var totalMs = 0;
+  var size = 0;
+  for (final step in steps) {
+    passedTests += step.testPassed;
+    failedTests += (step.testTotal - step.testPassed).clamp(0, 1 << 31);
+    if (!step.passed) failedRequests += 1;
+    totalMs += step.ms;
+    size += utf8.encode(step.body).length;
+  }
+  return _RunSummary(
+    totalRuns: steps.length,
+    passedTests: passedTests,
+    failedTests: failedTests,
+    failedRequests: failedRequests,
+    durationMs: totalMs,
+    averageMs: steps.isEmpty ? 0 : totalMs ~/ steps.length,
+    responseBytes: size,
+  );
+}
+
+List<int> _iterationsOf(List<RunStepResult> steps) {
+  final values = steps.map((step) => step.iteration).toSet().toList()..sort();
+  return values;
+}
+
+int _compareSteps(RunStepResult a, RunStepResult b, int column) {
+  switch (column) {
+    case 0:
+      return a.iteration.compareTo(b.iteration);
+    case 1:
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    case 2:
+      return a.method.compareTo(b.method);
+    case 3:
+      return (a.status ?? 0).compareTo(b.status ?? 0);
+    case 4:
+      return a.ms.compareTo(b.ms);
+    case 5:
+      return a.testPassed.compareTo(b.testPassed);
+    case 6:
+      return _resultLabel(a).compareTo(_resultLabel(b));
+  }
+  return 0;
+}
+
+String _resultLabel(RunStepResult step) =>
+    step.error ?? (step.passed ? 'PASS' : 'FAIL');
+
+String _failureReason(RunStepResult step) {
+  if (step.error != null) return step.error!;
+  if (step.failures.isNotEmpty) return step.failures.join('; ');
+  return 'Failed';
+}
+
+String _formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
+Widget _configBar({
   required BuildContext ctx,
   required AppState state,
   required CollectionGroup? group,
   required List<CollectionEntry> entries,
-  required TextEditingController iterations,
-  required TextEditingController data,
+  required bool running,
+  required TextEditingController iterationsController,
+  required TextEditingController delayController,
+  required TextEditingController dataController,
+  required List<Map<String, String>> dataRows,
   required String dataName,
-  required bool stopOnError,
-  required ValueChanged<String> onDataName,
-  required ValueChanged<bool> onStopOnError,
+  required bool dataLocked,
+  required bool continueOnFailure,
+  required ValueChanged<bool> onContinueChanged,
+  required ValueChanged<String> onDataLoaded,
+  required VoidCallback onDataCleared,
 }) {
-  final parsed = _parseData(data.text);
-  return SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionLabel('执行次数'),
-        Row(
+  Widget numberField(TextEditingController controller, String hint) {
+    return SizedBox(
+      width: 86,
+      height: 32,
+      child: TextField(
+        controller: controller,
+        enabled: !running,
+        keyboardType: TextInputType.number,
+        style: TextStyle(fontSize: 12),
+        decoration: astraInput(
+          hint: hint,
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  return Wrap(
+    spacing: 12,
+    runSpacing: 8,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      Text('Runs', style: TextStyle(fontSize: 10.5, color: AstraColors.muted)),
+      numberField(iterationsController, '1'),
+      Text('Delay', style: TextStyle(fontSize: 10.5, color: AstraColors.muted)),
+      numberField(delayController, '0'),
+      SizedBox(
+        height: 32,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 120,
-              child: BoundTextField(
-                value: iterations.text,
-                hint: '1',
-                onChanged: (value) => iterations.text = value,
-              ),
+            Checkbox(
+              value: continueOnFailure,
+              activeColor: AstraColors.accent,
+              onChanged: running ? null : (value) => onContinueChanged(value ?? true),
             ),
-            const SizedBox(width: 12),
-            Text(
-              '执行 ${int.tryParse(iterations.text) ?? 1} 轮，共约 ${(int.tryParse(iterations.text) ?? 1) * entries.length} 次请求',
-              style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
-            ),
+            Text('Continue', style: TextStyle(fontSize: 11.5)),
           ],
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            const SectionLabel('数据文件（CSV / JSON，可选）'),
-            const Spacer(),
-            GhostButton(
-              label: '导入文件',
-              icon: Icons.upload_file,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              onPressed: () async {
+      ),
+      GhostButton(
+        label: 'Data File',
+        icon: Icons.upload_file,
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        onPressed: running
+            ? null
+            : () async {
                 final file = await pickUploadFile();
                 if (file == null) return;
                 try {
                   final text = await File(file.path).readAsString();
-                  data.text = text;
-                  onDataName(file.name);
-                  state.showToast('已载入 ${file.name}：${_parseData(text).length} 行数据');
+                  dataController.text = text;
+                  onDataLoaded(file.name);
                 } catch (err) {
-                  state.showToast('读取失败：$err');
+                  state.showToast('Unable to read file: $err');
                 }
               },
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 110,
-          child: TextField(
-            controller: data,
-            expands: true,
-            maxLines: null,
-            minLines: null,
-            style: monoStyle(size: 11.5, height: 1.5),
-            decoration: astraInput(
-              hint: 'user,token\nada,123\nlin,456\n\n或 JSON：[{"user":"ada","token":"123"}]',
-              contentPadding: const EdgeInsets.all(10),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
+      ),
+      GhostButton(
+        label: 'Clear',
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        onPressed: running || (dataName.isEmpty && dataController.text.isEmpty)
+            ? null
+            : onDataCleared,
+      ),
+      if (dataName.isNotEmpty)
         Text(
-          parsed.isEmpty
-              ? '留空则使用当前变量运行；每轮会把数据行合并进运行时变量。'
-              : '已识别 ${parsed.length} 行数据，字段：${parsed.first.keys.join('、')}',
-          style: const TextStyle(fontSize: 10.5, color: AstraColors.faint),
+          '$dataName - ${dataRows.length} data row(s)',
+          style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
         ),
-        if (dataName.isNotEmpty)
-          Text(
-            '来源：$dataName',
-            style: const TextStyle(fontSize: 10, color: AstraColors.accent),
-          ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Checkbox(
-              value: stopOnError,
-              activeColor: AstraColors.accent,
-              onChanged: (value) => onStopOnError(value ?? false),
-            ),
-            const Text('遇到失败立即停止', style: TextStyle(fontSize: 11.5)),
-            const Spacer(),
-            if (state.runningCollection)
-              GhostButton(
-                label: '停止运行',
-                icon: Icons.stop_circle_outlined,
-                onPressed: state.stopRunner,
-              ),
-            const SizedBox(width: 10),
-            GradientButton(
-              label: state.runningCollection ? '运行中…' : '开始运行',
-              icon: Icons.play_arrow_rounded,
-              onPressed: state.runningCollection || group == null
-                  ? null
-                  : () async {
-                      try {
-                        await state.runCollection(
-                          groupId: group.id,
-                          iterations: int.tryParse(iterations.text) ?? 1,
-                          dataRows: parsed,
-                          stopOnError: stopOnError,
-                        );
-                      } catch (err) {
-                        state.showToast('$err');
-                      }
-                    },
-            ),
-          ],
+      if (entries.isEmpty)
+        Text(
+          'No HTTP requests in this selection',
+          style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
         ),
-        if (state.runningCollection)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: LinearProgressIndicator(
-              minHeight: 3,
-              color: AstraColors.accent,
-              backgroundColor: AstraColors.line,
-            ),
-          ),
-        const SizedBox(height: 18),
-        const SectionLabel('将要运行的请求'),
-        ...entries.asMap().entries.map((item) {
-          final index = item.key;
-          final entry = item.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 5),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 22,
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(fontSize: 10, color: AstraColors.faint),
-                  ),
-                ),
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    entry.request?.method ?? 'GET',
-                    style: monoStyle(size: 10.5, color: AstraColors.accent2),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-        if (entries.isEmpty)
-          const Text(
-            '该集合还没有 HTTP 请求',
-            style: TextStyle(fontSize: 11, color: AstraColors.faint),
-          ),
-      ],
-    ),
+    ],
   );
 }
 
-Widget _reportPane(AppState state, RunReport? report) {
-  if (report == null) {
-    return const Center(
-      child: Text(
-        '还没有运行记录',
-        style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
+Widget _summaryCards(_RunSummary summary) {
+  final cards = <(String, String, Color?)>[
+    ('Total Runs', '${summary.totalRuns}', null),
+    ('Passed Tests', '${summary.passedTests}', null),
+    ('Failed Tests', '${summary.failedTests}',
+        summary.failedTests > 0 ? AstraColors.err : null),
+    ('Failed Requests', '${summary.failedRequests}',
+        summary.failedRequests > 0 ? AstraColors.err : null),
+    ('Duration', '${summary.durationMs} ms', null),
+    ('Avg Response', '${summary.averageMs} ms', null),
+    ('Response Size', _formatBytes(summary.responseBytes), null),
+  ];
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth < 640 ? 2 : 4;
+      final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final card in cards)
+            SizedBox(
+              width: width,
+              child: Container(
+                padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AstraColors.line),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      card.$1,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AstraColors.faint,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      card.$2,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: card.$3 ?? AstraColors.text,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _resultsSection({
+  required List<RunStepResult> visible,
+  required bool hasAny,
+  required int sortColumn,
+  required bool sortAscending,
+  required ValueChanged<int> onSort,
+}) {
+  Widget header(String label, int flex, int index, {bool numeric = false}) {
+    final active = sortColumn == index;
+    return Expanded(
+      flex: flex,
+      child: InkWell(
+        onTap: () => onSort(index),
+        child: Container(
+          height: 26,
+          padding: EdgeInsets.symmetric(horizontal: 10),
+          alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
+          child: Row(
+            mainAxisAlignment:
+                numeric ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: active ? AstraColors.text : AstraColors.muted,
+                  ),
+                ),
+              ),
+              if (active) ...[
+                SizedBox(width: 2),
+                Icon(
+                  sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 11,
+                  color: AstraColors.accent,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
-  final color = report.failed == 0 ? AstraColors.ok : AstraColors.err;
+
+  Widget cell(
+    String text,
+    int flex, {
+    bool numeric = false,
+    Color? color,
+    bool mono = false,
+    String? tooltip,
+  }) {
+    final content = Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: numeric ? TextAlign.right : TextAlign.left,
+      style: mono
+          ? monoStyle(size: 10.5, color: color ?? AstraColors.text)
+          : TextStyle(fontSize: 11, color: color ?? AstraColors.text),
+    );
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10),
+        child: Align(
+          alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
+          child: tooltip == null ? content : Tooltip(message: tooltip, child: content),
+        ),
+      ),
+    );
+  }
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Row(
-        children: [
-          Text(
-            '${(report.passRate * 100).toStringAsFixed(0)}%',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: color),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${report.passed}/${report.total} 通过',
-                style: const TextStyle(fontSize: 11.5),
-              ),
-              Text(
-                '${report.iterations} 轮 · ${report.durationMs} ms · ${report.collectionName}',
-                style: const TextStyle(fontSize: 10, color: AstraColors.faint),
-              ),
-            ],
-          ),
-          const Spacer(),
-          GhostButton(
-            label: '导出报告',
-            icon: Icons.download_outlined,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            onPressed: () async {
-              final path = await saveJsonFile(
-                'astra-run-report.json',
-                report.toJson(),
-              );
-              if (path != null) state.showToast('报告已导出');
-            },
-          ),
-        ],
+      Text(
+        'Results',
+        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
       ),
-      const SizedBox(height: 10),
+      SizedBox(height: 6),
       Expanded(
-        child: ListView.builder(
-          itemCount: report.steps.length,
-          itemBuilder: (context, index) {
-            final step = report.steps[index];
-            final ok = step.passed;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: ok ? const Color(0x0AFFFFFF) : const Color(0x14FB7185),
-                border: Border.all(
-                  color: ok ? AstraColors.line : const Color(0x33FB7185),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    ok ? Icons.check_circle_outline : Icons.error_outline,
-                    size: 14,
-                    color: ok ? AstraColors.ok : AstraColors.err,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AstraColors.line),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: !hasAny
+              ? Center(
+                  child: Text(
+                    'No results yet — click Run to start',
+                    style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
                   ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 44,
-                    child: Text(
-                      step.method,
-                      style: monoStyle(size: 10.5, color: AstraColors.accent2),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                )
+              : Column(
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          step.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5),
-                        ),
-                        if (step.error != null)
-                          Text(
-                            step.error!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AstraColors.err,
-                              height: 1.5,
-                            ),
-                          ),
-                        if (step.failures.isNotEmpty)
-                          Text(
-                            step.failures.join(' · '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AstraColors.warn,
-                              height: 1.5,
-                            ),
-                          ),
+                        header('Iteration', 1, 0),
+                        header('Request', 4, 1),
+                        header('Method', 1, 2),
+                        header('Status', 1, 3),
+                        header('Time', 1, 4, numeric: true),
+                        header('Tests', 1, 5, numeric: true),
+                        header('Result', 2, 6),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    step.status == null ? '—' : '${step.status}',
-                    style: monoStyle(
-                      size: 10.5,
-                      color: statusColor(step.status),
-                      weight: FontWeight.w600,
+                    Divider(height: 1, color: AstraColors.line),
+                    Expanded(
+                      child: visible.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No results for this iteration',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AstraColors.faint,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: visible.length,
+                              itemBuilder: (context, index) {
+                                final step = visible[index];
+                                final result = _resultLabel(step);
+                                final resultColor = step.passed
+                                    ? AstraColors.ok
+                                    : AstraColors.err;
+                                return Container(
+                                  height: 27,
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom:
+                                          BorderSide(color: AstraColors.overlay),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      cell('${step.iteration}', 1),
+                                      cell(
+                                        step.name,
+                                        4,
+                                        tooltip: step.name,
+                                      ),
+                                      cell(
+                                        step.method,
+                                        1,
+                                        mono: true,
+                                        color: AstraColors.accent2,
+                                      ),
+                                      cell(
+                                        step.error != null
+                                            ? 'ERR'
+                                            : '${step.status ?? '—'}',
+                                        1,
+                                        mono: true,
+                                        color: step.error != null
+                                            ? AstraColors.err
+                                            : statusColor(step.status),
+                                      ),
+                                      cell(
+                                        '${step.ms} ms',
+                                        1,
+                                        numeric: true,
+                                        color: AstraColors.muted,
+                                      ),
+                                      cell(
+                                        step.testTotal == 0
+                                            ? '-'
+                                            : '${step.testPassed}/${step.testTotal}',
+                                        1,
+                                        numeric: true,
+                                        color: AstraColors.muted,
+                                      ),
+                                      cell(
+                                        result,
+                                        2,
+                                        color: resultColor,
+                                        tooltip: result,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 58,
-                    child: Text(
-                      '${step.ms} ms',
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 10, color: AstraColors.faint),
-                    ),
-                  ),
-                  if (step.iteration > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        '#${step.iteration}',
-                        style: const TextStyle(fontSize: 9.5, color: AstraColors.faint),
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
+                  ],
+                ),
         ),
       ),
     ],
   );
 }
 
-Widget _monitorPane(BuildContext ctx, AppState state, CollectionGroup? group) {
-  final monitors = group == null ? <MonitorConfig>[] : state.monitorsFor(group.id);
+Widget _failuresSection(List<RunStepResult> failures) {
+  Widget header(String label, int flex, {bool numeric = false}) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        height: 26,
+        padding: EdgeInsets.symmetric(horizontal: 10),
+        alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: AstraColors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget cell(
+    String text,
+    int flex, {
+    bool numeric = false,
+    Color? color,
+    String? tooltip,
+  }) {
+    final content = Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: numeric ? TextAlign.right : TextAlign.left,
+      style: TextStyle(fontSize: 11, color: color ?? AstraColors.text),
+    );
+    return Expanded(
+      flex: flex,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10),
+        child: Align(
+          alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
+          child: tooltip == null ? content : Tooltip(message: tooltip, child: content),
+        ),
+      ),
+    );
+  }
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Row(
-        children: [
-          const Expanded(
-            child: Text(
-              '监控会在 Astra 运行期间按间隔自动执行集合，并记录最近一次通过情况。',
-              style: TextStyle(fontSize: 10.5, color: AstraColors.faint, height: 1.6),
-            ),
-          ),
-          GradientButton(
-            label: '新建监控',
-            icon: Icons.add_alarm,
-            onPressed: group == null
-                ? null
-                : () {
-                    final monitor = state.addMonitor(
-                      groupId: group.id,
-                      name: '${group.name} 监控',
-                      intervalMinutes: 30,
-                    );
-                    monitor.enabled = true;
-                    state.updateMonitor(monitor);
-                  },
-          ),
-        ],
+      Text(
+        'Failures',
+        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 6),
       Expanded(
-        child: monitors.isEmpty
-            ? const Center(
-                child: Text(
-                  '还没有定时监控',
-                  style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
-                ),
-              )
-            : ListView.builder(
-                itemCount: monitors.length,
-                itemBuilder: (context, index) {
-                  final monitor = monitors[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: const Color(0x08FFFFFF),
-                      border: Border.all(color: AstraColors.line),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Row(
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AstraColors.line),
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: failures.isEmpty
+              ? Center(
+                  child: Text(
+                    'No failures',
+                    style: TextStyle(fontSize: 11, color: AstraColors.faint),
+                  ),
+                )
+              : Column(
+                  children: [
+                    Row(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                monitor.name,
-                                style: const TextStyle(fontSize: 11.5),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                monitor.lastRunAt == 0
-                                    ? '尚未运行 · 每 ${monitor.intervalMinutes} 分钟'
-                                    : '上次 ${_time(monitor.lastRunAt)} · ${monitor.lastPassed}/${monitor.lastTotal} 通过',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AstraColors.faint,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        DropdownButton<int>(
-                          value: [5, 15, 30, 60, 120].contains(monitor.intervalMinutes)
-                              ? monitor.intervalMinutes
-                              : 30,
-                          dropdownColor: AstraColors.surface2,
-                          underline: const SizedBox.shrink(),
-                          style: const TextStyle(fontSize: 10.5, color: AstraColors.muted),
-                          items: const [5, 15, 30, 60, 120]
-                              .map(
-                                (value) => DropdownMenuItem(
-                                  value: value,
-                                  child: Text('每 $value 分钟'),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            monitor.intervalMinutes = value;
-                            state.updateMonitor(monitor);
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        Switch(
-                          value: monitor.enabled,
-                          activeThumbColor: AstraColors.accent,
-                          onChanged: (value) {
-                            monitor.enabled = value;
-                            state.updateMonitor(monitor);
-                          },
-                        ),
-                        IconButton(
-                          tooltip: '立即运行',
-                          onPressed: state.runningCollection
-                              ? null
-                              : () => state.runMonitorNow(monitor),
-                          icon: const Icon(Icons.play_circle_outline, size: 17),
-                          color: AstraColors.muted,
-                        ),
-                        IconButton(
-                          tooltip: '删除监控',
-                          onPressed: () => state.deleteMonitor(monitor.id),
-                          icon: const Icon(Icons.delete_outline, size: 17),
-                          color: AstraColors.faint,
-                        ),
+                        header('Iteration', 1),
+                        header('Request', 3),
+                        header('Status', 1),
+                        header('Reason', 6),
                       ],
                     ),
-                  );
-                },
-              ),
+                    Divider(height: 1, color: AstraColors.line),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: failures.length,
+                        itemBuilder: (context, index) {
+                          final step = failures[index];
+                          final reason = _failureReason(step);
+                          return Container(
+                            height: 27,
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: AstraColors.overlay),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                cell('${step.iteration}', 1),
+                                cell(step.name, 3, tooltip: step.name),
+                                cell(
+                                  step.error != null
+                                      ? 'ERR'
+                                      : '${step.status ?? '—'}',
+                                  1,
+                                  color: AstraColors.err,
+                                ),
+                                cell(
+                                  reason,
+                                  6,
+                                  color: AstraColors.err,
+                                  tooltip: reason,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     ],
   );
 }
 
-String _time(int ms) {
-  final time = DateTime.fromMillisecondsSinceEpoch(ms);
-  String two(int value) => value.toString().padLeft(2, '0');
-  return '${two(time.hour)}:${two(time.minute)}:${two(time.second)}';
-}
-
-/// 解析 CSV（含引号）或 JSON 数据文件为多行变量。
+/// Parses a CSV (with quotes) or JSON data file into rows of variables.
 List<Map<String, String>> _parseData(String raw) {
   final text = raw.trim();
   if (text.isEmpty) return const [];

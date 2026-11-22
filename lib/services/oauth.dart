@@ -32,10 +32,10 @@ class OAuthService {
     Duration timeout = const Duration(minutes: 3),
   }) async {
     if (authUrl.trim().isEmpty) {
-      return const OAuthTokenResult(error: '请先填写 Authorization 端点');
+      return const OAuthTokenResult(error: 'Enter the Authorization endpoint first');
     }
     if (tokenUrl.trim().isEmpty) {
-      return const OAuthTokenResult(error: '请先填写 Token 端点');
+      return const OAuthTokenResult(error: 'Enter the Token endpoint first');
     }
 
     final verifier = pkce ? _randomString(64) : '';
@@ -46,7 +46,7 @@ class OAuthService {
     try {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     } on SocketException {
-      return OAuthTokenResult(error: '本地回调端口 $port 已被占用，请修改端口后重试');
+      return OAuthTokenResult(error: 'Local callback port $port is already in use. Change the port and try again');
     }
 
     final completer = Completer<Map<String, String>>();
@@ -55,11 +55,11 @@ class OAuthService {
       request.response
         ..headers.contentType = ContentType.html
         ..write(
-          '<html><head><meta charset="utf-8"><title>Astra 授权</title></head>'
+          '<html><head><meta charset="utf-8"><title>Astra Authorization</title></head>'
           '<body style="font-family:-apple-system;background:#0b0f17;color:#e6edf7;'
           'display:flex;align-items:center;justify-content:center;height:100vh">'
-          '<div style="text-align:center"><h2>Astra 授权完成</h2>'
-          '<p style="color:#8a97ad">可以关闭此页面并回到 Astra。</p></div></body></html>',
+          '<div style="text-align:center"><h2>Astra Authorization Complete</h2>'
+          '<p style="color:#8a97ad">You can close this page and return to Astra.</p></div></body></html>',
         );
       await request.response.close();
       if (!completer.isCompleted) completer.complete(params);
@@ -85,16 +85,16 @@ class OAuthService {
       params = await completer.future.timeout(timeout);
     } on TimeoutException {
       await server.close(force: true);
-      return const OAuthTokenResult(error: '等待授权超时，请重新发起授权');
+      return const OAuthTokenResult(error: 'Timed out waiting for authorization. Please start authorization again');
     } finally {
       await server.close(force: true);
     }
 
     if (params['error'] != null) {
-      return OAuthTokenResult(error: '授权失败：${params['error']} ${params['error_description'] ?? ''}');
+      return OAuthTokenResult(error: 'Authorization failed: ${params['error']} ${params['error_description'] ?? ''}');
     }
     final code = params['code'] ?? '';
-    if (code.isEmpty) return const OAuthTokenResult(error: '回调中未获取到授权码');
+    if (code.isEmpty) return const OAuthTokenResult(error: 'No authorization code received in callback');
 
     return _requestToken(
       tokenUrl: tokenUrl,
@@ -117,7 +117,7 @@ class OAuthService {
     String clientSecret = '',
   }) async {
     if (tokenUrl.trim().isEmpty || refreshToken.trim().isEmpty) {
-      return const OAuthTokenResult(error: '缺少 Token 端点或 refresh_token');
+      return const OAuthTokenResult(error: 'Missing Token endpoint or refresh_token');
     }
     return _requestToken(
       tokenUrl: tokenUrl,
@@ -167,14 +167,14 @@ class OAuthService {
       final text = await response.transform(utf8.decoder).join();
       if (response.statusCode >= 400) {
         return OAuthTokenResult(
-          error: '获取 Token 失败（HTTP ${response.statusCode}）：${_short(text)}',
+          error: 'Failed to get token (HTTP ${response.statusCode}): ${_short(text)}',
         );
       }
       final dynamic data = jsonDecode(text);
-      if (data is! Map) return const OAuthTokenResult(error: 'Token 响应不是 JSON 对象');
+      if (data is! Map) return const OAuthTokenResult(error: 'Token response is not a JSON object');
       final token = '${data['access_token'] ?? ''}';
       if (token.isEmpty) {
-        return OAuthTokenResult(error: '响应中没有 access_token：${_short(text)}');
+        return OAuthTokenResult(error: 'Response does not contain access_token: ${_short(text)}');
       }
       final expiresIn = int.tryParse('${data['expires_in'] ?? 0}') ?? 0;
       return OAuthTokenResult(
@@ -185,7 +185,7 @@ class OAuthService {
             : 0,
       );
     } catch (err) {
-      return OAuthTokenResult(error: '获取 Token 失败：$err');
+      return OAuthTokenResult(error: 'Failed to get token: $err');
     } finally {
       client.close(force: true);
     }
