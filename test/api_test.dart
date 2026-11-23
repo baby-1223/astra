@@ -342,6 +342,59 @@ void main() {
       expect(result.variables, isEmpty);
     });
 
+    test('v2.1 dump keeps nested folders', () {
+      final dump = {
+        'version': 1,
+        'collections': [
+          {
+            'info': {'name': 'Shop', 'schema': 'v2.1.0'},
+            'item': [
+              {
+                'name': 'Auth',
+                'item': [
+                  {
+                    'name': 'Token',
+                    'request': {
+                      'method': 'POST',
+                      'url': {'raw': 'https://api.test/token'},
+                    },
+                  },
+                  {
+                    'name': 'Deep',
+                    'item': [
+                      {
+                        'name': 'Ping',
+                        'request': {'method': 'GET', 'url': 'https://api.test/ping'},
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                'name': 'Root',
+                'request': {'method': 'GET', 'url': 'https://api.test/root'},
+              },
+            ],
+          },
+        ],
+      };
+
+      final result = importPostman(Map<String, dynamic>.from(dump));
+
+      expect(result.groups.single.name, 'Shop');
+      final auth = result.folders.firstWhere((f) => f.name == 'Auth');
+      final deep = result.folders.firstWhere((f) => f.name == 'Deep');
+      expect(auth.parentId, '');
+      expect(deep.parentId, auth.id);
+      expect(result.collections.firstWhere((c) => c.name == 'Token').folderId, auth.id);
+      expect(result.collections.firstWhere((c) => c.name == 'Ping').folderId, deep.id);
+      expect(result.collections.firstWhere((c) => c.name == 'Root').folderId, '');
+      expect(
+        result.collections.every((c) => c.groupId == result.groups.single.id),
+        isTrue,
+      );
+    });
+
     test('exports Postman and OpenAPI', () {
       final result = importPostman(Map<String, dynamic>.from(postman));
       final env = Env(vars: [KV(k: 'baseUrl', v: 'https://api.demo.com')]);
