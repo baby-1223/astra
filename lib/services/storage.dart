@@ -44,4 +44,15 @@ class Storage {
       // 持久化失败不阻断主流程。
     }
   }
+
+  /// 删除持久化文件；文件不存在时静默忽略。
+  Future<void> delete(String name) async {
+    try {
+      final dir = await _root();
+      final file = File('${dir.path}${Platform.pathSeparator}$name');
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // 删除失败不阻断主流程。
+    }
+  }
 }

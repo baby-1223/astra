@@ -14,7 +14,7 @@ import 'services/ws_service.dart';
 
 class AppState extends ChangeNotifier {
   static const String appName = 'Astra';
-  static const String version = '2.1.2';
+  static const String version = '2.1.3';
 
   final Storage storage = Storage();
   final HttpService http = HttpService();
@@ -2543,6 +2543,56 @@ class AppState extends ChangeNotifier {
   /* ------------------------------------------------------------------ */
   /* 持久化                                                              */
   /* ------------------------------------------------------------------ */
+
+  /// 一键还原：删除本地持久化数据并回到首次启动状态。
+  Future<void> resetToInitialState() async {
+    _persistTimer?.cancel();
+    _draftTimer?.cancel();
+    for (final timer in _monitorTimers.values) {
+      timer.cancel();
+    }
+    _monitorTimers.clear();
+    await storage.delete('workspace.json');
+    await storage.delete('draft.json');
+
+    mode = 'http';
+    tabs = [];
+    activeTabId = '';
+    _fallbackRequest = ApiRequest();
+    _fallbackWs = WsConfig();
+    environments = [Env()];
+    activeEnvId = environments.first.id;
+    groups = [];
+    folders = [];
+    pendingGroupId = '';
+    pendingFolderId = '';
+    collections = [];
+    history = [];
+    cookies = [];
+    globals = [];
+    settings = AppSettings();
+    monitors = [];
+    selectedId = null;
+    response = null;
+    responseError = null;
+    sending = false;
+    responseCookies = [];
+    responseHistory.clear();
+    runningCollection = false;
+    runnerProgress = '';
+    lastReport = null;
+    runSteps.clear();
+    runStartedAt = 0;
+    _stopRunner = false;
+    sseRunning = false;
+    sseStatus = null;
+    sseLog.clear();
+    sseCount = 0;
+    wsReceived = 0;
+    wsError = null;
+    toast = null;
+    notifyListeners();
+  }
 
   Future<void> load() async {
     final workspace = await storage.read('workspace.json');

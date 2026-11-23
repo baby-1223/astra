@@ -352,31 +352,6 @@ void _walkLegacyDumpItems(
   }
 }
 
-/// Postman data dumps store collections as legacy "requests" and "folders" lists.
-void _walkLegacyItems(
-  dynamic requests,
-  dynamic folders,
-  String prefix,
-  List<CollectionEntry> collections,
-) {
-  for (final raw in _list(folders).whereType<Map>()) {
-    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim();
-    final fullName = prefix.isEmpty ? name : '$prefix / $name';
-    _walkLegacyItems(raw['requests'], raw['folders'], fullName, collections);
-  }
-  for (final raw in _list(requests).whereType<Map>()) {
-    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
-    collections.add(_collection(prefix.isEmpty ? name : '$prefix / $name', {
-      'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
-      'url': _postmanUrl(raw['url']),
-      'headers': _legacyHeaders(raw['headers']),
-      'params': <dynamic>[],
-      'auth': _legacyAuth(raw),
-      ..._legacyBody(raw),
-    }));
-  }
-}
-
 List<Map<String, dynamic>> _legacyHeaders(dynamic headers) {
   if (headers is List) {
     return headers

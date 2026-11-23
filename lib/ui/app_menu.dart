@@ -59,6 +59,14 @@ class AstraMenuBar extends StatelessWidget {
             ),
           ],
         ),
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
+              label: 'Reset to Initial State…',
+              onSelected: () => resetAppData(context, state),
+            ),
+          ],
+        ),
       ],
     ),
     PlatformMenu(
@@ -125,6 +133,7 @@ class _InlineMenuBar extends StatelessWidget {
                 'New Request': state.newRequest,
                 'Import…': () => importWorkspaceData(context, state),
                 'Export…': () => exportWorkspaceData(context, state),
+                'Reset to Initial State…': () => resetAppData(context, state),
               },
             ),
             _MenuButton(
@@ -220,6 +229,22 @@ Future<void> checkForUpdatesDialog(BuildContext context) async {
       error: true,
     );
   }
+}
+
+/// 一键还原：确认后清空全部本地数据，回到首次启动状态。
+Future<void> resetAppData(BuildContext context, AppState state) async {
+  final confirmed = await showConfirmDialog(
+    context,
+    title: 'Reset to Initial State',
+    message:
+        'This removes all collections, environments, history, cookies and '
+        'settings stored on this device, and cannot be undone.',
+    confirmLabel: 'Reset',
+  );
+  if (!confirmed || !context.mounted) return;
+  await state.resetToInitialState();
+  if (!context.mounted) return;
+  state.showToast('Astra has been reset to its initial state');
 }
 
 Future<bool> openExternal(String url) async {

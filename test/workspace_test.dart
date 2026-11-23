@@ -4,6 +4,28 @@ import 'package:astra/state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('一键还原', () {
+    test('清空全部数据并回到默认环境', () async {
+      final state = AppState();
+      state.createEnv('开发');
+      state.globals.add(KV(k: 'global', v: '1'));
+      state.mode = 'ws';
+
+      await state.resetToInitialState();
+
+      expect(state.mode, 'http');
+      expect(state.tabs, isEmpty);
+      expect(state.environments.length, 1);
+      expect(state.env.vars.where((item) => item.k.isNotEmpty), isEmpty);
+      expect(state.globals, isEmpty);
+      expect(state.collections, isEmpty);
+      expect(state.groups, isEmpty);
+      expect(state.folders, isEmpty);
+      expect(state.history, isEmpty);
+      expect(state.cookies, isEmpty);
+    });
+  });
+
   group('多环境', () {
     test('创建、切换与删除环境', () {
       final state = AppState();
