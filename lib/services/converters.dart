@@ -6,13 +6,30 @@ class ImportResult {
   final List<CollectionEntry> collections;
   final List<KV> variables;
   final String name;
+  final List<Env> environments;
+  final List<KV> globals;
+  final List<CollectionGroup> groups;
+  final List<CollectionFolder> folders;
 
   ImportResult({
     required this.collections,
     required this.variables,
     required this.name,
+    this.environments = const [],
+    this.globals = const [],
+    this.groups = const [],
+    this.folders = const [],
   });
 }
+
+List<KV> _kvList(dynamic list) => _list(list)
+    .whereType<Map>()
+    .where((item) =>
+        _str(item['key']).trim().isNotEmpty &&
+        item['disabled'] != true &&
+        item['enabled'] != false)
+    .map((item) => KV(k: _str(item['key']).trim(), v: _str(item['value'])))
+    .toList();
 
 Map<String, dynamic> _map(dynamic value) {
   if (value is Map<String, dynamic>) return value;
@@ -221,6 +238,35 @@ Map<String, dynamic> _postmanAuth(
   return result;
 }
 
+CollectionEntry? _postmanEntry(String name, Map raw) {
+  if (raw['request'] == null) return null;
+  final source = raw['request'] is String
+      ? <String, dynamic>{'url': raw['request']}
+      : _map(raw['request']);
+  final headers = _list(source['header'])
+      .whereType<Map>()
+      .where((h) => _str(h['key']).isNotEmpty && h['disabled'] != true)
+      .map((h) {
+    final value = h['value'];
+    return {
+      'on': true,
+      'k': _str(h['key']),
+      'v': value is List ? value.map(_str).join(', ') : _str(value),
+    };
+  }).toList();
+  final params = <Map<String, dynamic>>[];
+  final auth = _postmanAuth(_map(source['auth']), headers, params);
+
+  return _collection(name, {
+    'method': _str(source['method']).isEmpty ? 'GET' : _str(source['method']).toUpperCase(),
+    'url': _postmanUrl(source['url']),
+    'headers': headers,
+    'params': params,
+    'auth': auth,
+    ..._postmanBody(_map(source['body'])),
+  });
+}
+
 void _walkPostmanItems(
   dynamic items,
   String prefix,
@@ -235,32 +281,74 @@ void _walkPostmanItems(
       _walkPostmanItems(raw['item'], fullName, collections, addVars);
       continue;
     }
-    if (raw['request'] == null) continue;
-    final source = raw['request'] is String
-        ? <String, dynamic>{'url': raw['request']}
-        : _map(raw['request']);
-    final headers = _list(source['header'])
-        .whereType<Map>()
-        .where((h) => _str(h['key']).isNotEmpty && h['disabled'] != true)
-        .map((h) {
-      final value = h['value'];
-      return {
-        'on': true,
-        'k': _str(h['key']),
-        'v': value is List ? value.map(_str).join(', ') : _str(value),
-      };
-    }).toList();
-    final params = <Map<String, dynamic>>[];
-    final auth = _postmanAuth(_map(source['auth']), headers, params);
+    final entry = _postmanEntry(fullName, raw);
+    if (entry != null) collections.add(entry);
+  }
+}
 
-    collections.add(_collection(fullName, {
-      'method': _str(source['method']).isEmpty ? 'GET' : _str(source['method']).toUpperCase(),
-      'url': _postmanUrl(source['url']),
-      'headers': headers,
-      'params': params,
-      'auth': auth,
-      ..._postmanBody(_map(source['body'])),
-    }));
+/// Walks a v2.1 collection inside a data dump, recreating its folder tree.
+void _walkDumpItems(
+  dynamic items,
+  CollectionGroup group,
+  String parentFolderId,
+  List<CollectionEntry> collections,
+  List<CollectionFolder> folders,
+) {
+  for (final raw in _list(items).whereType<Map>()) {
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled' : _str(raw['name']).trim();
+    if (raw['item'] is List) {
+      final folder = CollectionFolder(
+        groupId: group.id,
+        parentId: parentFolderId,
+        name: name,
+        variables: _kvList(raw['variable']),
+      );
+      folders.add(folder);
+      _walkDumpItems(raw['item'], group, folder.id, collections, folders);
+      continue;
+    }
+    final entry = _postmanEntry(name, raw);
+    if (entry == null) continue;
+    entry
+      ..groupId = group.id
+      ..folderId = parentFolderId;
+    collections.add(entry);
+  }
+}
+
+/// Walks a legacy dump collection, recreating its folder tree.
+void _walkLegacyDumpItems(
+  dynamic requests,
+  dynamic rawFolders,
+  CollectionGroup group,
+  String parentFolderId,
+  List<CollectionEntry> collections,
+  List<CollectionFolder> folders,
+) {
+  for (final raw in _list(rawFolders).whereType<Map>()) {
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim();
+    final folder = CollectionFolder(
+      groupId: group.id,
+      parentId: parentFolderId,
+      name: name,
+      variables: _kvList(raw['variable']),
+    );
+    folders.add(folder);
+    _walkLegacyDumpItems(raw['requests'], raw['folders'], group, folder.id, collections, folders);
+  }
+  for (final raw in _list(requests).whereType<Map>()) {
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
+    final entry = _collection(name, {
+      'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
+      'url': _postmanUrl(raw['url']),
+      'headers': _legacyHeaders(raw['headers']),
+      'params': <dynamic>[],
+      'auth': _legacyAuth(raw),
+      ..._legacyBody(raw),
+    })
+      ..groupId = group.id
+      ..folderId = parentFolderId;
+    collections.add(entry);
   }
 }
 
@@ -387,6 +475,8 @@ ImportResult importPostman(Map<String, dynamic> data) {
   }
 
   if (_isPostmanDump(data)) {
+    final groups = <CollectionGroup>[];
+    final folders = <CollectionFolder>[];
     for (final raw in _list(data['collections']).whereType<Map>()) {
       final collection = Map<String, dynamic>.from(raw);
       final infoName = _str(_map(collection['info'])['name']).trim();
@@ -395,21 +485,35 @@ ImportResult importPostman(Map<String, dynamic> data) {
           : (_str(collection['name']).trim().isEmpty
               ? 'Imported Collection'
               : _str(collection['name']).trim());
-      addVars(collection['variable']);
+      final group = CollectionGroup(name: name, variables: _kvList(collection['variable']));
+      groups.add(group);
       if (collection['item'] is List) {
-        _walkPostmanItems(collection['item'], name, collections, addVars);
+        _walkDumpItems(collection['item'], group, '', collections, folders);
       } else {
-        _walkLegacyItems(collection['requests'], collection['folders'], name, collections);
+        _walkLegacyDumpItems(
+          collection['requests'],
+          collection['folders'],
+          group,
+          '',
+          collections,
+          folders,
+        );
       }
     }
-    addVars(data['globals']);
+    final environments = <Env>[];
     for (final environment in _list(data['environments']).whereType<Map>()) {
-      addVars(environment['values']);
+      final name = _str(environment['name']).trim();
+      if (name.isEmpty) continue;
+      environments.add(Env(name: name, vars: _kvList(environment['values'])));
     }
     return ImportResult(
       collections: collections,
-      variables: variables,
+      variables: const [],
       name: 'Postman Data Dump',
+      environments: environments,
+      globals: _kvList(data['globals']),
+      groups: groups,
+      folders: folders,
     );
   }
 

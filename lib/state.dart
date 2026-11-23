@@ -14,7 +14,7 @@ import 'services/ws_service.dart';
 
 class AppState extends ChangeNotifier {
   static const String appName = 'Astra';
-  static const String version = '2.1.1';
+  static const String version = '2.1.2';
 
   final Storage storage = Storage();
   final HttpService http = HttpService();
@@ -2425,11 +2425,28 @@ class AppState extends ChangeNotifier {
       env.vars.removeWhere((item) => item.k.isEmpty && item.v.isEmpty);
       if (env.vars.isEmpty) env.vars.add(KV());
     }
+    groups.addAll(result.groups);
+    folders.addAll(result.folders);
+    for (final global in result.globals) {
+      if (!globals.any((item) => item.k.trim() == global.k.trim())) {
+        globals.add(global);
+      }
+    }
+    if (result.environments.isNotEmpty) {
+      environments.addAll(result.environments);
+      activeEnvId = result.environments.first.id;
+    }
     collections.insertAll(0, result.collections);
     notifyListeners();
     _schedulePersist();
     final label = kind == 'postman' ? 'Postman' : 'OpenAPI';
-    return 'Imported ${result.collections.length} requests from $label, merged $merged variables';
+    final created = <String>[
+      if (result.groups.isNotEmpty) '${result.groups.length} collection(s)',
+      if (result.folders.isNotEmpty) '${result.folders.length} folder(s)',
+      if (result.environments.isNotEmpty) '${result.environments.length} environment(s)',
+    ];
+    final suffix = created.isEmpty ? '' : ', created ${created.join(', ')}';
+    return 'Imported ${result.collections.length} requests from $label, merged $merged variables$suffix';
   }
 
   String _importAstra(Map<String, dynamic> data) {

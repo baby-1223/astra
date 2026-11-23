@@ -243,6 +243,9 @@ void main() {
         'collections': [
           {
             'name': 'Team API',
+            'variable': [
+              {'key': 'teamToken', 'value': 'abc', 'enabled': true},
+            ],
             'requests': [
               {
                 'name': 'Ping',
@@ -303,16 +306,40 @@ void main() {
       final result = importPostman(Map<String, dynamic>.from(dump));
 
       expect(result.collections.length, 3);
-      expect(result.collections.any((c) => c.name == 'V2 / Users / List'), isTrue);
-      final ping = result.collections.firstWhere((c) => c.name == 'Team API / Ping');
+      expect(result.groups.map((g) => g.name), containsAll(['Team API', 'V2']));
+
+      final team = result.groups.firstWhere((g) => g.name == 'Team API');
+      expect(team.variables.single.k, 'teamToken');
+      expect(team.variables.single.v, 'abc');
+      final folder = result.folders.firstWhere((f) => f.name == 'Auth');
+      expect(folder.groupId, team.id);
+      expect(folder.parentId, '');
+
+      final ping = result.collections.firstWhere((c) => c.name == 'Ping');
+      expect(ping.groupId, team.id);
+      expect(ping.folderId, '');
       expect(ping.request!.headers.first.k, 'X-Team');
-      final login = result.collections.firstWhere((c) => c.name == 'Team API / Auth / Login');
+
+      final login = result.collections.firstWhere((c) => c.name == 'Login');
+      expect(login.groupId, team.id);
+      expect(login.folderId, folder.id);
       expect(login.request!.bodyMode, 'json');
       expect(login.request!.auth.type, 'bearer');
       expect(login.request!.auth.token, '{{token}}');
-      expect(result.variables.any((v) => v.k == 'baseUrl' && v.v == 'https://api.test'), isTrue);
-      expect(result.variables.any((v) => v.k == 'team' && v.v == 'astra'), isTrue);
-      expect(result.variables.any((v) => v.k == 'off'), isFalse);
+
+      final v2 = result.groups.firstWhere((g) => g.name == 'V2');
+      final usersFolder = result.folders.firstWhere((f) => f.name == 'Users');
+      final list = result.collections.firstWhere((c) => c.name == 'List');
+      expect(usersFolder.groupId, v2.id);
+      expect(list.groupId, v2.id);
+      expect(list.folderId, usersFolder.id);
+
+      final environment = result.environments.single;
+      expect(environment.name, 'Dev');
+      expect(environment.vars.first.k, 'baseUrl');
+      expect(environment.vars.first.v, 'https://api.test');
+      expect(result.globals.map((g) => g.k), ['team']);
+      expect(result.variables, isEmpty);
     });
 
     test('exports Postman and OpenAPI', () {
