@@ -93,7 +93,6 @@ Map<String, dynamic> _readDataDumpZip(List<int> bytes) {
   for (final entry in archive.files) {
     if (!entry.isFile || !entry.name.toLowerCase().endsWith('.json')) continue;
     final content = entry.content;
-    if (content is! List<int>) continue;
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(content, allowMalformed: true));
