@@ -237,6 +237,84 @@ void main() {
       expect(result.collections[1].request!.auth.type, 'bearer');
     });
 
+    test('imports Postman data dumps with every collection and environment', () {
+      final dump = {
+        'version': 1,
+        'collections': [
+          {
+            'name': 'Team API',
+            'requests': [
+              {
+                'name': 'Ping',
+                'method': 'get',
+                'url': 'https://api.test/ping',
+                'headers': 'X-Team: astra\n',
+              },
+            ],
+            'folders': [
+              {
+                'name': 'Auth',
+                'folders': <dynamic>[],
+                'requests': [
+                  {
+                    'name': 'Login',
+                    'method': 'post',
+                    'url': 'https://api.test/login',
+                    'headers': 'Content-Type: application/json\n',
+                    'dataMode': 'raw',
+                    'data': '{"user":"ada"}',
+                    'currentHelper': 'bearerAuth',
+                    'helperAttributes': {'token': '{{token}}'},
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            'info': {'name': 'V2'},
+            'item': [
+              {
+                'name': 'Users',
+                'item': [
+                  {
+                    'name': 'List',
+                    'request': {'method': 'GET', 'url': 'https://api.test/users'},
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        'environments': [
+          {
+            'name': 'Dev',
+            'values': [
+              {'key': 'baseUrl', 'value': 'https://api.test', 'enabled': true},
+            ],
+          },
+        ],
+        'globals': [
+          {'key': 'team', 'value': 'astra', 'enabled': true},
+          {'key': 'off', 'value': 'x', 'enabled': false},
+        ],
+      };
+
+      expect(detectKind(dump), 'postman');
+      final result = importPostman(Map<String, dynamic>.from(dump));
+
+      expect(result.collections.length, 3);
+      expect(result.collections.any((c) => c.name == 'V2 / Users / List'), isTrue);
+      final ping = result.collections.firstWhere((c) => c.name == 'Team API / Ping');
+      expect(ping.request!.headers.first.k, 'X-Team');
+      final login = result.collections.firstWhere((c) => c.name == 'Team API / Auth / Login');
+      expect(login.request!.bodyMode, 'json');
+      expect(login.request!.auth.type, 'bearer');
+      expect(login.request!.auth.token, '{{token}}');
+      expect(result.variables.any((v) => v.k == 'baseUrl' && v.v == 'https://api.test'), isTrue);
+      expect(result.variables.any((v) => v.k == 'team' && v.v == 'astra'), isTrue);
+      expect(result.variables.any((v) => v.k == 'off'), isFalse);
+    });
+
     test('exports Postman and OpenAPI', () {
       final result = importPostman(Map<String, dynamic>.from(postman));
       final env = Env(vars: [KV(k: 'baseUrl', v: 'https://api.demo.com')]);

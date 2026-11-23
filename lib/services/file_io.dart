@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../models.dart';
@@ -43,19 +44,25 @@ class PickedJson {
   PickedJson(this.fileName, this.data);
 }
 
-/// 选择并解析 JSON 文件；返回 null 表示用户取消。
-Future<PickedJson?> pickJsonFile() async {
+/// 选择并解析导入文件；支持 JSON 和 Postman 导出的 ZIP 数据包。
+Future<PickedJson?> pickImportFile() async {
   final file = await FilePicker.pickFile(
     dialogTitle: 'Select Import File',
     type: FileType.custom,
-    allowedExtensions: ['json'],
+    allowedExtensions: ['json', 'zip'],
   );
   if (file == null) return null;
 
   final bytes = await file.readAsBytes().catchError((err) {
     throw FormatException('Unable to read the selected file. Make sure it is accessible and try again ($err)');
   });
+  final isZip = bytes.length > 4 && bytes[0] == 0x50 && bytes[1] == 0x4B;
+  if (isZip) return PickedJson(file.name, _readDataDumpZip(bytes));
   final text = utf8.decode(bytes, allowMalformed: true);
+  return PickedJson(file.name, _decodeJsonObject(text));
+}
+
+Map<String, dynamic> _decodeJsonObject(String text) {
   final trimmed = text.trimLeft();
   if (!trimmed.startsWith('{')) {
     throw const FormatException('YAML and other non-JSON files are not supported. Convert to JSON before importing');
@@ -69,7 +76,61 @@ Future<PickedJson?> pickJsonFile() async {
   if (decoded is! Map) {
     throw const FormatException('File content is not a valid object structure');
   }
-  return PickedJson(file.name, Map<String, dynamic>.from(decoded));
+  return Map<String, dynamic>.from(decoded);
+}
+
+/// 读取 Postman 数据包 ZIP，并合并为一个数据集合，交给导入器处理。
+Map<String, dynamic> _readDataDumpZip(List<int> bytes) {
+  final Archive archive;
+  try {
+    archive = ZipDecoder().decodeBytes(bytes);
+  } catch (err) {
+    throw FormatException('Failed to read the ZIP file: $err');
+  }
+  final collections = <dynamic>[];
+  final environments = <dynamic>[];
+  final globals = <dynamic>[];
+  for (final entry in archive.files) {
+    if (!entry.isFile || !entry.name.toLowerCase().endsWith('.json')) continue;
+    final content = entry.content;
+    if (content is! List<int>) continue;
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(content, allowMalformed: true));
+    } catch (_) {
+      continue;
+    }
+    if (decoded is! Map) continue;
+    _collectDumpEntry(Map<String, dynamic>.from(decoded), collections, environments, globals);
+  }
+  if (collections.isEmpty && environments.isEmpty && globals.isEmpty) {
+    throw const FormatException('No Postman collections or environments found in this ZIP file');
+  }
+  return {'collections': collections, 'environments': environments, 'globals': globals};
+}
+
+void _collectDumpEntry(
+  Map<String, dynamic> entry,
+  List<dynamic> collections,
+  List<dynamic> environments,
+  List<dynamic> globals,
+) {
+  if (entry['collections'] is List) {
+    collections.addAll(entry['collections'] as List);
+    if (entry['environments'] is List) environments.addAll(entry['environments'] as List);
+    if (entry['globals'] is List) globals.addAll(entry['globals'] as List);
+    return;
+  }
+  if (entry['values'] is List) {
+    environments.add(entry);
+    return;
+  }
+  if (entry['item'] is List ||
+      entry['info'] is Map ||
+      entry['requests'] is List ||
+      entry['folders'] is List) {
+    collections.add(entry);
+  }
 }
 
 /// 保存 JSON 文件；返回保存路径，取消时返回 null。

@@ -35,8 +35,24 @@ Map<String, dynamic> _emptyRequest() => {
       'formData': <dynamic>[],
     };
 
+bool _isPostmanDump(Map data) {
+  final raw = data['collections'];
+  if (raw is! List) return false;
+  if (raw.isEmpty) return data['environments'] is List;
+  for (final entry in raw.whereType<Map>()) {
+    if (entry['item'] is List ||
+        entry['info'] is Map ||
+        entry['requests'] is List ||
+        entry['folders'] is List) {
+      return true;
+    }
+  }
+  return false;
+}
+
 String detectKind(dynamic data) {
   if (data is! Map) return 'unknown';
+  if (_isPostmanDump(data)) return 'postman';
   if (data['collections'] is List) return 'astra';
   if (data['openapi'] != null || data['swagger'] != null) return 'openapi';
   if (data['info'] is Map &&
@@ -205,6 +221,152 @@ Map<String, dynamic> _postmanAuth(
   return result;
 }
 
+void _walkPostmanItems(
+  dynamic items,
+  String prefix,
+  List<CollectionEntry> collections,
+  void Function(dynamic) addVars,
+) {
+  for (final raw in _list(items).whereType<Map>()) {
+    addVars(raw['variable']);
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
+    final fullName = prefix.isEmpty ? name : '$prefix / $name';
+    if (raw['item'] is List) {
+      _walkPostmanItems(raw['item'], fullName, collections, addVars);
+      continue;
+    }
+    if (raw['request'] == null) continue;
+    final source = raw['request'] is String
+        ? <String, dynamic>{'url': raw['request']}
+        : _map(raw['request']);
+    final headers = _list(source['header'])
+        .whereType<Map>()
+        .where((h) => _str(h['key']).isNotEmpty && h['disabled'] != true)
+        .map((h) {
+      final value = h['value'];
+      return {
+        'on': true,
+        'k': _str(h['key']),
+        'v': value is List ? value.map(_str).join(', ') : _str(value),
+      };
+    }).toList();
+    final params = <Map<String, dynamic>>[];
+    final auth = _postmanAuth(_map(source['auth']), headers, params);
+
+    collections.add(_collection(fullName, {
+      'method': _str(source['method']).isEmpty ? 'GET' : _str(source['method']).toUpperCase(),
+      'url': _postmanUrl(source['url']),
+      'headers': headers,
+      'params': params,
+      'auth': auth,
+      ..._postmanBody(_map(source['body'])),
+    }));
+  }
+}
+
+/// Postman data dumps store collections as legacy "requests" and "folders" lists.
+void _walkLegacyItems(
+  dynamic requests,
+  dynamic folders,
+  String prefix,
+  List<CollectionEntry> collections,
+) {
+  for (final raw in _list(folders).whereType<Map>()) {
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim();
+    final fullName = prefix.isEmpty ? name : '$prefix / $name';
+    _walkLegacyItems(raw['requests'], raw['folders'], fullName, collections);
+  }
+  for (final raw in _list(requests).whereType<Map>()) {
+    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
+    collections.add(_collection(prefix.isEmpty ? name : '$prefix / $name', {
+      'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
+      'url': _postmanUrl(raw['url']),
+      'headers': _legacyHeaders(raw['headers']),
+      'params': <dynamic>[],
+      'auth': _legacyAuth(raw),
+      ..._legacyBody(raw),
+    }));
+  }
+}
+
+List<Map<String, dynamic>> _legacyHeaders(dynamic headers) {
+  if (headers is List) {
+    return headers
+        .whereType<Map>()
+        .where((h) => _str(h['key']).isNotEmpty && h['enabled'] != false)
+        .map((h) => {'on': true, 'k': _str(h['key']), 'v': _str(h['value'])})
+        .toList();
+  }
+  final result = <Map<String, dynamic>>[];
+  for (final line in _str(headers).split('\n')) {
+    final trimmed = line.trim();
+    final colon = trimmed.indexOf(':');
+    if (colon <= 0) continue;
+    final key = trimmed.substring(0, colon).trim();
+    if (key.isEmpty) continue;
+    result.add({'on': true, 'k': key, 'v': trimmed.substring(colon + 1).trim()});
+  }
+  return result;
+}
+
+Map<String, dynamic> _legacyBody(Map raw) {
+  final mode = _str(raw['dataMode']);
+  if (mode == 'urlencoded' || mode == 'params' || mode == 'formdata') {
+    final entries = _list(raw['data'])
+        .whereType<Map>()
+        .where((item) => item['enabled'] != false)
+        .toList();
+    if (mode == 'urlencoded') {
+      return {
+        'bodyMode': 'form',
+        'form': entries
+            .map((item) => {'on': true, 'k': _str(item['key']), 'v': _str(item['value'])})
+            .toList(),
+      };
+    }
+    return {
+      'bodyMode': 'form-data',
+      'formData': entries
+          .map((item) => {
+                'on': true,
+                'k': _str(item['key']),
+                'v': _str(item['value']),
+                'type': 'text',
+              })
+          .toList(),
+    };
+  }
+  final rawText = _str(raw['rawModeData']);
+  final text = rawText.isNotEmpty ? rawText : (raw['data'] is String ? raw['data'] as String : '');
+  if (text.isEmpty) return {};
+  final isJson = RegExp(r'^\s*[\[{]').hasMatch(text);
+  return {'bodyMode': isJson ? 'json' : 'text', 'body': text};
+}
+
+Map<String, dynamic> _legacyAuth(Map raw) {
+  final helper = _str(raw['currentHelper']).toLowerCase();
+  final attributes = _map(raw['helperAttributes']);
+  switch (helper) {
+    case 'basicauth':
+      return {
+        'type': 'basic',
+        'username': _str(attributes['username']),
+        'password': _str(attributes['password']),
+      };
+    case 'bearerauth':
+      return {'type': 'bearer', 'token': _str(attributes['token'])};
+    case 'apikeyauth':
+      return {
+        'type': 'apikey',
+        'apiKeyName': _str(attributes['key']),
+        'apiKeyValue': _str(attributes['value']),
+        'apiKeyIn': _str(attributes['in']).isEmpty ? 'header' : _str(attributes['in']),
+      };
+    default:
+      return {'type': 'none'};
+  }
+}
+
 ImportResult importPostman(Map<String, dynamic> data) {
   final collections = <CollectionEntry>[];
   final variables = <KV>[];
@@ -213,52 +375,46 @@ ImportResult importPostman(Map<String, dynamic> data) {
   void addVars(dynamic list) {
     for (final item in _list(list).whereType<Map>()) {
       final key = _str(item['key']).trim();
-      if (key.isEmpty || item['disabled'] == true || seenVars.contains(key)) continue;
+      if (key.isEmpty ||
+          item['disabled'] == true ||
+          item['enabled'] == false ||
+          seenVars.contains(key)) {
+        continue;
+      }
       seenVars.add(key);
       variables.add(KV(k: key, v: _str(item['value'])));
     }
   }
 
-  void walk(dynamic items, String prefix) {
-    for (final raw in _list(items).whereType<Map>()) {
-      addVars(raw['variable']);
-      final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
-      final fullName = prefix.isEmpty ? name : '$prefix / $name';
-      if (raw['item'] is List) {
-        walk(raw['item'], fullName);
-        continue;
+  if (_isPostmanDump(data)) {
+    for (final raw in _list(data['collections']).whereType<Map>()) {
+      final collection = Map<String, dynamic>.from(raw);
+      final infoName = _str(_map(collection['info'])['name']).trim();
+      final name = infoName.isNotEmpty
+          ? infoName
+          : (_str(collection['name']).trim().isEmpty
+              ? 'Imported Collection'
+              : _str(collection['name']).trim());
+      addVars(collection['variable']);
+      if (collection['item'] is List) {
+        _walkPostmanItems(collection['item'], name, collections, addVars);
+      } else {
+        _walkLegacyItems(collection['requests'], collection['folders'], name, collections);
       }
-      if (raw['request'] == null) continue;
-      final source = raw['request'] is String
-          ? <String, dynamic>{'url': raw['request']}
-          : _map(raw['request']);
-      final headers = _list(source['header'])
-          .whereType<Map>()
-          .where((h) => _str(h['key']).isNotEmpty && h['disabled'] != true)
-          .map((h) {
-        final value = h['value'];
-        return {
-          'on': true,
-          'k': _str(h['key']),
-          'v': value is List ? value.map(_str).join(', ') : _str(value),
-        };
-      }).toList();
-      final params = <Map<String, dynamic>>[];
-      final auth = _postmanAuth(_map(source['auth']), headers, params);
-
-      collections.add(_collection(fullName, {
-        'method': _str(source['method']).isEmpty ? 'GET' : _str(source['method']).toUpperCase(),
-        'url': _postmanUrl(source['url']),
-        'headers': headers,
-        'params': params,
-        'auth': auth,
-        ..._postmanBody(_map(source['body'])),
-      }));
     }
+    addVars(data['globals']);
+    for (final environment in _list(data['environments']).whereType<Map>()) {
+      addVars(environment['values']);
+    }
+    return ImportResult(
+      collections: collections,
+      variables: variables,
+      name: 'Postman Data Dump',
+    );
   }
 
   addVars(data['variable']);
-  walk(data['item'], '');
+  _walkPostmanItems(data['item'], '', collections, addVars);
   final info = _map(data['info']);
   return ImportResult(
     collections: collections,

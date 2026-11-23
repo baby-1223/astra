@@ -14,7 +14,7 @@ import 'services/ws_service.dart';
 
 class AppState extends ChangeNotifier {
   static const String appName = 'Astra';
-  static const String version = '2.0.0';
+  static const String version = '2.1.1';
 
   final Storage storage = Storage();
   final HttpService http = HttpService();

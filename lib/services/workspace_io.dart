@@ -7,7 +7,7 @@ import 'file_io.dart';
 /// Shared import action used by the top bar and the application menu.
 Future<void> importWorkspaceData(BuildContext context, AppState state) async {
   try {
-    final picked = await pickJsonFile();
+    final picked = await pickImportFile();
     if (picked == null) return;
     final message = state.importData(picked.data);
     state.showToast(message);
