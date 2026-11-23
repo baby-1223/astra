@@ -316,40 +316,131 @@ void _walkDumpItems(
   }
 }
 
-/// Walks a legacy dump collection, recreating its folder tree.
-void _walkLegacyDumpItems(
-  dynamic requests,
-  dynamic rawFolders,
+/// Walks a legacy dump collection.
+///
+/// Dumps may nest requests inside folders, keep them flat with a "folder" id,
+/// or only list them in a folder's "order" array. All three shapes are handled.
+void _walkLegacyDumpCollection(
+  Map<dynamic, dynamic> collection,
   CollectionGroup group,
-  String parentFolderId,
   List<CollectionEntry> collections,
   List<CollectionFolder> folders,
 ) {
-  for (final raw in _list(rawFolders).whereType<Map>()) {
-    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim();
+  final folderById = <String, CollectionFolder>{};
+  final rawById = <String, Map>{};
+  final parentOf = <String, String>{};
+  final orderOf = <String, List<String>>{};
+  final nestedRequestIds = <String>{};
+
+  List<String> readOrder(dynamic raw) =>
+      _list(raw).map(_str).where((id) => id.isNotEmpty).toList();
+
+  void registerFolder(Map raw, String? nestedParentId) {
+    var id = _str(raw['id']).trim();
+    if (id.isEmpty) id = 'folder-${folderById.length}';
+    if (folderById.containsKey(id)) return;
     final folder = CollectionFolder(
       groupId: group.id,
-      parentId: parentFolderId,
-      name: name,
+      parentId: nestedParentId ?? '',
+      name: _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim(),
       variables: _kvList(raw['variable']),
     );
+    folderById[id] = folder;
+    rawById[id] = raw;
     folders.add(folder);
-    _walkLegacyDumpItems(raw['requests'], raw['folders'], group, folder.id, collections, folders);
+    orderOf[id] = readOrder(raw['order']);
+    if (nestedParentId != null && nestedParentId.isNotEmpty) {
+      parentOf[id] = nestedParentId;
+    }
+    for (final request in _list(raw['requests']).whereType<Map>()) {
+      final requestId = _str(request['id']).trim();
+      if (requestId.isNotEmpty) nestedRequestIds.add(requestId);
+      _addLegacyDumpRequest(request, group, folder.id, collections);
+    }
+    for (final child in _list(raw['folders']).whereType<Map>()) {
+      registerFolder(child, id);
+    }
   }
-  for (final raw in _list(requests).whereType<Map>()) {
-    final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
-    final entry = _collection(name, {
-      'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
-      'url': _postmanUrl(raw['url']),
-      'headers': _legacyHeaders(raw['headers']),
-      'params': <dynamic>[],
-      'auth': _legacyAuth(raw),
-      ..._legacyBody(raw),
-    })
-      ..groupId = group.id
-      ..folderId = parentFolderId;
-    collections.add(entry);
+
+  orderOf[''] = readOrder(collection['order']);
+  for (final raw in _list(collection['folders']).whereType<Map>()) {
+    registerFolder(raw, null);
   }
+
+  for (final entry in folderById.keys.toList()) {
+    final declared = _str(rawById[entry]?['folder']).trim();
+    if (declared.isEmpty) continue;
+    if (folderById.containsKey(declared) && declared != entry) {
+      parentOf[entry] = declared;
+    }
+  }
+  orderOf.forEach((parentId, ids) {
+    if (parentId.isEmpty) return;
+    for (final childId in ids) {
+      if (folderById.containsKey(childId) && childId != parentId) {
+        parentOf.putIfAbsent(childId, () => parentId);
+      }
+    }
+  });
+
+  bool createsCycle(String id, String parentId) {
+    var current = parentId;
+    final seen = <String>{};
+    while (seen.add(current)) {
+      if (current == id) return true;
+      final next = parentOf[current];
+      if (next == null) return false;
+      current = next;
+    }
+    return true;
+  }
+
+  for (final entry in folderById.entries) {
+    final parentId = parentOf[entry.key] ?? '';
+    final parent = parentId.isNotEmpty &&
+            parentId != entry.key &&
+            folderById.containsKey(parentId) &&
+            !createsCycle(entry.key, parentId)
+        ? folderById[parentId]!
+        : null;
+    entry.value.parentId = parent?.id ?? '';
+  }
+
+  final orderOwner = <String, String>{};
+  orderOf.forEach((parentId, ids) {
+    for (final id in ids) {
+      orderOwner[id] = parentId;
+    }
+  });
+
+  for (final raw in _list(collection['requests']).whereType<Map>()) {
+    final requestId = _str(raw['id']).trim();
+    if (requestId.isNotEmpty && !nestedRequestIds.add(requestId)) continue;
+    var folderId = _str(raw['folder']).trim();
+    if (folderId.isEmpty) folderId = _str(raw['folderId']).trim();
+    if (folderId.isEmpty) folderId = orderOwner[requestId] ?? '';
+    _addLegacyDumpRequest(raw, group, folderById[folderId]?.id ?? '', collections);
+  }
+}
+
+void _addLegacyDumpRequest(
+  Map raw,
+  CollectionGroup group,
+  String folderId,
+  List<CollectionEntry> collections,
+) {
+  final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
+  final entry = _collection(name, {
+    'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
+    'url': _postmanUrl(raw['url']),
+    'headers': _legacyHeaders(raw['headers']),
+    'params': <dynamic>[],
+    'auth': _legacyAuth(raw),
+    ..._legacyBody(raw),
+  })
+    ..groupId = group.id
+    ..folderId = folderId;
+  collections.add(entry);
 }
 
 List<Map<String, dynamic>> _legacyHeaders(dynamic headers) {
@@ -465,14 +556,7 @@ ImportResult importPostman(Map<String, dynamic> data) {
       if (collection['item'] is List) {
         _walkDumpItems(collection['item'], group, '', collections, folders);
       } else {
-        _walkLegacyDumpItems(
-          collection['requests'],
-          collection['folders'],
-          group,
-          '',
-          collections,
-          folders,
-        );
+        _walkLegacyDumpCollection(collection, group, collections, folders);
       }
     }
     final environments = <Env>[];

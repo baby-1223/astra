@@ -395,6 +395,45 @@ void main() {
       );
     });
 
+    test('legacy dump nests flat folders and uses order for membership', () {
+      final dump = {
+        'version': 1,
+        'collections': [
+          {
+            'name': 'Flat',
+            'folders': [
+              {
+                'id': 'f1',
+                'name': 'A',
+                'order': ['f2', 'r1'],
+              },
+              {
+                'id': 'f2',
+                'name': 'B',
+                'folder': 'f1',
+                'order': ['r2'],
+              },
+            ],
+            'requests': [
+              {'id': 'r1', 'name': 'One', 'method': 'GET', 'url': 'https://x/1', 'headers': ''},
+              {'id': 'r2', 'name': 'Two', 'method': 'GET', 'url': 'https://x/2', 'headers': ''},
+              {'id': 'r3', 'name': 'Root', 'method': 'GET', 'url': 'https://x/3', 'headers': ''},
+            ],
+            'order': ['f1', 'r3'],
+          },
+        ],
+      };
+
+      final result = importPostman(Map<String, dynamic>.from(dump));
+
+      final a = result.folders.firstWhere((f) => f.name == 'A');
+      final b = result.folders.firstWhere((f) => f.name == 'B');
+      expect(b.parentId, a.id);
+      expect(result.collections.firstWhere((c) => c.name == 'One').folderId, a.id);
+      expect(result.collections.firstWhere((c) => c.name == 'Two').folderId, b.id);
+      expect(result.collections.firstWhere((c) => c.name == 'Root').folderId, '');
+    });
+
     test('exports Postman and OpenAPI', () {
       final result = importPostman(Map<String, dynamic>.from(postman));
       final env = Env(vars: [KV(k: 'baseUrl', v: 'https://api.demo.com')]);
