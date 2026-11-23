@@ -120,6 +120,10 @@ void _collectDumpEntry(
     if (entry['globals'] is List) globals.addAll(entry['globals'] as List);
     return;
   }
+  if (entry['_postman_variable_scope'] == 'globals') {
+    globals.add(entry);
+    return;
+  }
   if (entry['values'] is List) {
     environments.add(entry);
     return;

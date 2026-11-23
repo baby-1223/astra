@@ -22,14 +22,66 @@ class ImportResult {
   });
 }
 
-List<KV> _kvList(dynamic list) => _list(list)
-    .whereType<Map>()
-    .where((item) =>
-        _str(item['key']).trim().isNotEmpty &&
-        item['disabled'] != true &&
-        item['enabled'] != false)
-    .map((item) => KV(k: _str(item['key']).trim(), v: _str(item['value'])))
-    .toList();
+/// Parses key/value entries from arrays or legacy key/value maps.
+/// Disabled entries are kept with [KV.on] set to false.
+List<KV> _kvList(dynamic list) {
+  if (list is Map) {
+    final result = <KV>[];
+    list.forEach((key, raw) {
+      final name = _str(key).trim();
+      if (name.isEmpty) return;
+      if (raw is Map) {
+        result.add(KV(
+          on: raw['disabled'] != true && raw['enabled'] != false,
+          k: name,
+          v: _str(raw['value']),
+        ));
+      } else {
+        result.add(KV(k: name, v: _str(raw)));
+      }
+    });
+    return result;
+  }
+  return _list(list)
+      .whereType<Map>()
+      .where((item) => _str(item['key']).trim().isNotEmpty)
+      .map((item) => KV(
+            on: item['disabled'] != true && item['enabled'] != false,
+            k: _str(item['key']).trim(),
+            v: _str(item['value']),
+          ))
+      .toList();
+}
+
+/// Reads collection/folder variables from "variable", "variables" array or map.
+List<KV> _variablesFrom(Map raw) {
+  final variable = raw['variable'];
+  if (variable != null) return _kvList(variable);
+  final variables = raw['variables'];
+  if (variables != null) return _kvList(variables);
+  return const [];
+}
+
+/// Reads globals from a dump: plain key/value entries or globals objects with "values".
+List<KV> _globalsFrom(dynamic value) {
+  final result = <KV>[];
+  if (value is List) {
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      if (entry['values'] is List) {
+        result.addAll(_kvList(entry['values']));
+      } else {
+        result.addAll(_kvList([entry]));
+      }
+    }
+  } else if (value is Map) {
+    result.addAll(_kvList(value));
+  }
+  final seen = <String>{};
+  return result
+      .where((kv) => kv.on && kv.k.isNotEmpty && seen.add(kv.k))
+      .toList();
+}
 
 Map<String, dynamic> _map(dynamic value) {
   if (value is Map<String, dynamic>) return value;
@@ -99,6 +151,32 @@ CollectionEntry _collection(
 /* ------------------------------------------------------------------ */
 /* Postman v2.0 / v2.1                                                */
 /* ------------------------------------------------------------------ */
+
+/// Splits "?a=1&b=2" off a URL so the query is shown in the Params table.
+({String base, List<Map<String, dynamic>> params}) _splitQuery(String url) {
+  final index = url.indexOf('?');
+  if (index < 0) return (base: url, params: <Map<String, dynamic>>[]);
+  final fragment = url.indexOf('#', index);
+  final query = url.substring(index + 1, fragment < 0 ? url.length : fragment);
+  final params = <Map<String, dynamic>>[];
+  for (final pair in query.split('&').where((part) => part.isNotEmpty)) {
+    final separator = pair.indexOf('=');
+    params.add({
+      'on': true,
+      'k': _decodeQuery(separator < 0 ? pair : pair.substring(0, separator)),
+      'v': _decodeQuery(separator < 0 ? '' : pair.substring(separator + 1)),
+    });
+  }
+  return (base: url.substring(0, index), params: params);
+}
+
+String _decodeQuery(String text) {
+  try {
+    return Uri.decodeQueryComponent(text);
+  } catch (_) {
+    return text;
+  }
+}
 
 String _postmanUrl(dynamic url) {
   if (url is String) return url;
@@ -254,12 +332,18 @@ CollectionEntry? _postmanEntry(String name, Map raw) {
       'v': value is List ? value.map(_str).join(', ') : _str(value),
     };
   }).toList();
+  final split = _splitQuery(_postmanUrl(source['url']));
   final params = <Map<String, dynamic>>[];
   final auth = _postmanAuth(_map(source['auth']), headers, params);
+  for (final param in split.params) {
+    if (!params.any((e) => e['k'] == param['k'] && e['v'] == param['v'])) {
+      params.add(param);
+    }
+  }
 
   return _collection(name, {
     'method': _str(source['method']).isEmpty ? 'GET' : _str(source['method']).toUpperCase(),
-    'url': _postmanUrl(source['url']),
+    'url': split.base,
     'headers': headers,
     'params': params,
     'auth': auth,
@@ -274,7 +358,7 @@ void _walkPostmanItems(
   void Function(dynamic) addVars,
 ) {
   for (final raw in _list(items).whereType<Map>()) {
-    addVars(raw['variable']);
+    addVars(_variablesFrom(raw));
     final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
     final fullName = prefix.isEmpty ? name : '$prefix / $name';
     if (raw['item'] is List) {
@@ -301,7 +385,7 @@ void _walkDumpItems(
         groupId: group.id,
         parentId: parentFolderId,
         name: name,
-        variables: _kvList(raw['variable']),
+        variables: _variablesFrom(raw),
       );
       folders.add(folder);
       _walkDumpItems(raw['item'], group, folder.id, collections, folders);
@@ -343,7 +427,7 @@ void _walkLegacyDumpCollection(
       groupId: group.id,
       parentId: nestedParentId ?? '',
       name: _str(raw['name']).trim().isEmpty ? 'Untitled Folder' : _str(raw['name']).trim(),
-      variables: _kvList(raw['variable']),
+      variables: _variablesFrom(raw),
     );
     folderById[id] = folder;
     rawById[id] = raw;
@@ -430,11 +514,30 @@ void _addLegacyDumpRequest(
   List<CollectionEntry> collections,
 ) {
   final name = _str(raw['name']).trim().isEmpty ? 'Untitled Request' : _str(raw['name']).trim();
+  final split = _splitQuery(_postmanUrl(raw['url']));
+  final params = <Map<String, dynamic>>[];
+  for (final entry in [..._list(raw['params']), ..._list(raw['query'])]) {
+    if (entry is! Map) continue;
+    final key = _str(entry['key']).trim().isEmpty
+        ? _str(entry['name']).trim()
+        : _str(entry['key']).trim();
+    if (key.isEmpty) continue;
+    params.add({
+      'on': entry['disabled'] != true && entry['enabled'] != false,
+      'k': key,
+      'v': _str(entry['value']),
+    });
+  }
+  for (final param in split.params) {
+    if (!params.any((e) => e['k'] == param['k'] && e['v'] == param['v'])) {
+      params.add(param);
+    }
+  }
   final entry = _collection(name, {
     'method': _str(raw['method']).isEmpty ? 'GET' : _str(raw['method']).toUpperCase(),
-    'url': _postmanUrl(raw['url']),
+    'url': split.base,
     'headers': _legacyHeaders(raw['headers']),
-    'params': <dynamic>[],
+    'params': params,
     'auth': _legacyAuth(raw),
     ..._legacyBody(raw),
   })
@@ -526,8 +629,11 @@ ImportResult importPostman(Map<String, dynamic> data) {
   final variables = <KV>[];
   final seenVars = <String>{};
 
-  void addVars(dynamic list) {
-    for (final item in _list(list).whereType<Map>()) {
+  void addVars(dynamic source) {
+    final entries = source is Iterable<KV>
+        ? source.map((kv) => {'key': kv.k, 'value': kv.v, 'disabled': !kv.on})
+        : _list(source).whereType<Map>();
+    for (final item in entries) {
       final key = _str(item['key']).trim();
       if (key.isEmpty ||
           item['disabled'] == true ||
@@ -551,7 +657,7 @@ ImportResult importPostman(Map<String, dynamic> data) {
           : (_str(collection['name']).trim().isEmpty
               ? 'Imported Collection'
               : _str(collection['name']).trim());
-      final group = CollectionGroup(name: name, variables: _kvList(collection['variable']));
+      final group = CollectionGroup(name: name, variables: _variablesFrom(collection));
       groups.add(group);
       if (collection['item'] is List) {
         _walkDumpItems(collection['item'], group, '', collections, folders);
@@ -570,13 +676,13 @@ ImportResult importPostman(Map<String, dynamic> data) {
       variables: const [],
       name: 'Postman Data Dump',
       environments: environments,
-      globals: _kvList(data['globals']),
+      globals: _globalsFrom(data['globals']),
       groups: groups,
       folders: folders,
     );
   }
 
-  addVars(data['variable']);
+  addVars(_variablesFrom(data));
   _walkPostmanItems(data['item'], '', collections, addVars);
   final info = _map(data['info']);
   return ImportResult(

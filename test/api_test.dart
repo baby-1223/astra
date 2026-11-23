@@ -342,6 +342,68 @@ void main() {
       expect(result.variables, isEmpty);
     });
 
+    test('legacy dump imports map variables and URL query params', () {
+      final dump = {
+        'version': 1,
+        'collections': [
+          {
+            'name': 'Backup',
+            'variables': {
+              'baseUrl': 'https://api.test',
+              'off': {'value': 'x', 'enabled': false},
+            },
+            'folders': [
+              {
+                'id': 'f1',
+                'name': 'Folder',
+                'variables': {'token': 'abc'},
+              },
+            ],
+            'requests': [
+              {
+                'name': 'List',
+                'method': 'GET',
+                'folder': 'f1',
+                'url': 'https://api.test/users?page=2&q=astra',
+              },
+              {
+                'name': 'Params',
+                'method': 'GET',
+                'folder': 'f1',
+                'url': {'raw': 'https://api.test/x'},
+                'params': [
+                  {'key': 'a', 'value': '1', 'enabled': true},
+                  {'key': 'b', 'value': '2', 'enabled': false},
+                ],
+              },
+            ],
+          },
+        ],
+        'environments': <dynamic>[],
+      };
+
+      final result = importPostman(Map<String, dynamic>.from(dump));
+      final group = result.groups.single;
+      expect(group.variables.map((v) => v.k), ['baseUrl', 'off']);
+      expect(group.variables.firstWhere((v) => v.k == 'off').on, isFalse);
+      expect(result.folders.single.variables.single.v, 'abc');
+
+      final list = result.collections.firstWhere((c) => c.name == 'List');
+      expect(list.request!.url, 'https://api.test/users');
+      expect(
+        list.request!.params.map((p) => '${p.k}=${p.v}'),
+        ['page=2', 'q=astra'],
+      );
+
+      final params = result.collections.firstWhere((c) => c.name == 'Params');
+      expect(params.request!.url, 'https://api.test/x');
+      expect(params.request!.params.map((p) => p.k), containsAll(['a', 'b']));
+      expect(
+        params.request!.params.firstWhere((p) => p.k == 'b').on,
+        isFalse,
+      );
+    });
+
     test('v2.1 dump keeps nested folders', () {
       final dump = {
         'version': 1,
