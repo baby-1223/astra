@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'state.dart';
 import 'ui/advanced_dialogs.dart';
+import 'ui/app_menu.dart';
 import 'ui/dialogs.dart';
 import 'ui/http_panel.dart';
 import 'ui/request_tabs.dart';
@@ -68,9 +69,12 @@ class _AstraAppState extends State<AstraApp> {
   }
 
   Future<void> _addFolderToSelection(BuildContext context) async {
-    final group = state.selectedGroupNode ??
+    final group =
+        state.selectedGroupNode ??
         state.groups
-            .where((item) => item.id == (state.selectedFolderNode?.groupId ?? ''))
+            .where(
+              (item) => item.id == (state.selectedFolderNode?.groupId ?? ''),
+            )
             .firstOrNull;
     if (group == null) return;
     final parentId = state.selectedFolderNode?.id ?? '';
@@ -115,7 +119,8 @@ class _AstraAppState extends State<AstraApp> {
     }
     final folder = state.selectedFolderNode;
     if (folder != null) {
-      final mode = state.groups
+      final mode =
+          state.groups
               .where((item) => item.id == folder.groupId)
               .firstOrNull
               ?.mode ??
@@ -221,7 +226,8 @@ class _AstraAppState extends State<AstraApp> {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged = null;
+    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
+        null;
     if (widget.state == null) state.dispose();
     super.dispose();
   }
@@ -237,13 +243,16 @@ class _AstraAppState extends State<AstraApp> {
         builder: (context, _) {
           return CallbackShortcuts(
             bindings: {
-              SingleActivator(LogicalKeyboardKey.keyS, meta: true): state.saveActive,
+              SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+                  state.saveActive,
               SingleActivator(LogicalKeyboardKey.keyS, control: true):
                   state.saveActive,
-              SingleActivator(LogicalKeyboardKey.keyT, meta: true): state.newRequest,
+              SingleActivator(LogicalKeyboardKey.keyT, meta: true):
+                  state.newRequest,
               SingleActivator(LogicalKeyboardKey.keyT, control: true):
                   state.newRequest,
-              SingleActivator(LogicalKeyboardKey.keyN, meta: true): state.newRequest,
+              SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+                  state.newRequest,
               SingleActivator(LogicalKeyboardKey.keyN, control: true):
                   state.newRequest,
               SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
@@ -254,14 +263,30 @@ class _AstraAppState extends State<AstraApp> {
                   state.closeTab(state.activeTabId),
               SingleActivator(LogicalKeyboardKey.keyW, control: true): () =>
                   state.closeTab(state.activeTabId),
-              SingleActivator(LogicalKeyboardKey.keyV, meta: true, shift: true): () =>
+              SingleActivator(
+                LogicalKeyboardKey.keyV,
+                meta: true,
+                shift: true,
+              ): () =>
                   showVariablesDialog(context, state),
-              SingleActivator(LogicalKeyboardKey.keyV, control: true, shift: true):
-                  () => showVariablesDialog(context, state),
-              SingleActivator(LogicalKeyboardKey.keyR, meta: true, shift: true): () =>
+              SingleActivator(
+                LogicalKeyboardKey.keyV,
+                control: true,
+                shift: true,
+              ): () =>
+                  showVariablesDialog(context, state),
+              SingleActivator(
+                LogicalKeyboardKey.keyR,
+                meta: true,
+                shift: true,
+              ): () =>
                   showRunnerDialog(context, state),
-              SingleActivator(LogicalKeyboardKey.keyR, control: true, shift: true):
-                  () => showRunnerDialog(context, state),
+              SingleActivator(
+                LogicalKeyboardKey.keyR,
+                control: true,
+                shift: true,
+              ): () =>
+                  showRunnerDialog(context, state),
               SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
                   showShortcutsDialog(context),
               SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
@@ -282,59 +307,89 @@ class _AstraAppState extends State<AstraApp> {
                   _deleteSelection(context),
               SingleActivator(LogicalKeyboardKey.keyR, meta: true, alt: true):
                   _addRequestToSelection,
-              SingleActivator(LogicalKeyboardKey.keyR, control: true, alt: true):
-                  _addRequestToSelection,
-              SingleActivator(LogicalKeyboardKey.keyF, meta: true, alt: true):
-                  () => _addFolderToSelection(context),
-              SingleActivator(LogicalKeyboardKey.keyF, control: true, alt: true):
-                  () => _addFolderToSelection(context),
-              SingleActivator(LogicalKeyboardKey.keyC, meta: true, alt: true):
-                  () => _addCollectionFromShortcut(context),
-              SingleActivator(LogicalKeyboardKey.keyC, control: true, alt: true):
-                  () => _addCollectionFromShortcut(context),
-              SingleActivator(LogicalKeyboardKey.enter, meta: true, shift: true):
-                  () => _runSelection(context),
-              SingleActivator(LogicalKeyboardKey.enter, control: true, shift: true):
-                  () => _runSelection(context),
+              SingleActivator(
+                LogicalKeyboardKey.keyR,
+                control: true,
+                alt: true,
+              ): _addRequestToSelection,
+              SingleActivator(
+                LogicalKeyboardKey.keyF,
+                meta: true,
+                alt: true,
+              ): () =>
+                  _addFolderToSelection(context),
+              SingleActivator(
+                LogicalKeyboardKey.keyF,
+                control: true,
+                alt: true,
+              ): () =>
+                  _addFolderToSelection(context),
+              SingleActivator(
+                LogicalKeyboardKey.keyC,
+                meta: true,
+                alt: true,
+              ): () =>
+                  _addCollectionFromShortcut(context),
+              SingleActivator(
+                LogicalKeyboardKey.keyC,
+                control: true,
+                alt: true,
+              ): () =>
+                  _addCollectionFromShortcut(context),
+              SingleActivator(
+                LogicalKeyboardKey.enter,
+                meta: true,
+                shift: true,
+              ): () =>
+                  _runSelection(context),
+              SingleActivator(
+                LogicalKeyboardKey.enter,
+                control: true,
+                shift: true,
+              ): () =>
+                  _runSelection(context),
             },
             child: Focus(
               autofocus: true,
-              child: Scaffold(
-                backgroundColor: AstraColors.bg,
-                body: Stack(
-                  children: [
-                    Column(
-                      children: [
-                        TopBar(state: state),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Sidebar(state: state),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    RequestTabBar(state: state),
-                                    Expanded(
-                                      child: state.mode == 'ws'
-                                          ? WsView(state: state)
-                                          : HttpView(state: state),
-                                    ),
-                                  ],
+              child: AstraMenuBar(
+                state: state,
+                child: Scaffold(
+                  backgroundColor: AstraColors.bg,
+                  body: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          TopBar(state: state),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Sidebar(state: state),
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      RequestTabBar(state: state),
+                                      Expanded(
+                                        child: state.mode == 'ws'
+                                            ? WsView(state: state)
+                                            : HttpView(state: state),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    if (state.toast != null)
-                      Positioned(
-                        bottom: 26,
-                        left: 0,
-                        right: 0,
-                        child: Center(child: _Toast(message: state.toast!)),
+                        ],
                       ),
-                  ],
+                      if (state.toast != null)
+                        Positioned(
+                          bottom: 26,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: _Toast(message: state.toast!)),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -360,7 +415,11 @@ class _Toast extends StatelessWidget {
         border: Border.all(color: AstraColors.accentBorder),
         borderRadius: BorderRadius.circular(11),
         boxShadow: [
-          BoxShadow(color: Color(0x73000000), blurRadius: 30, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x73000000),
+            blurRadius: 30,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Row(
@@ -373,7 +432,11 @@ class _Toast extends StatelessWidget {
               message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: AstraColors.text, height: 1.5),
+              style: TextStyle(
+                fontSize: 12,
+                color: AstraColors.text,
+                height: 1.5,
+              ),
             ),
           ),
         ],

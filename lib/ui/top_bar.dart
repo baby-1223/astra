@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/file_io.dart';
+import '../services/workspace_io.dart';
 import '../state.dart';
 import 'advanced_dialogs.dart';
 import 'dialogs.dart';
@@ -13,64 +13,11 @@ class TopBar extends StatelessWidget {
 
   TopBar({super.key, required this.state});
 
-  Future<void> _import(BuildContext context) async {
-    try {
-      final picked = await pickJsonFile();
-      if (picked == null) return;
-      final message = state.importData(picked.data);
-      state.showToast(message);
-    } on FormatException catch (err) {
-      if (!context.mounted) return;
-      await showMessageDialog(
-        context,
-        title: 'Import Failed',
-        message: err.message,
-        error: true,
-      );
-    } catch (err) {
-      if (!context.mounted) return;
-      await showMessageDialog(
-        context,
-        title: 'Import Failed',
-        message: '$err',
-        error: true,
-      );
-    }
-  }
+  Future<void> _import(BuildContext context) =>
+      importWorkspaceData(context, state);
 
-  Future<void> _export(BuildContext context) async {
-    final format = await showExportDialog(context);
-    if (format == null || !context.mounted) return;
-    try {
-      final stamp = DateTime.now();
-      final suffix = '${stamp.year}'
-          '${stamp.month.toString().padLeft(2, '0')}'
-          '${stamp.day.toString().padLeft(2, '0')}';
-      late final Map<String, dynamic> data;
-      late final String name;
-      switch (format) {
-        case 'postman':
-          data = state.exportPostman();
-          name = 'astra-postman-$suffix.json';
-        case 'openapi':
-          data = state.exportOpenApi();
-          name = 'astra-openapi-$suffix.json';
-        default:
-          data = state.exportAstra();
-          name = 'astra-$suffix.json';
-      }
-      final path = await saveJsonFile(name, data);
-      if (path != null) state.showToast('Exported: $path');
-    } catch (err) {
-      if (!context.mounted) return;
-      await showMessageDialog(
-        context,
-        title: 'Export Failed',
-        message: '$err',
-        error: true,
-      );
-    }
-  }
+  Future<void> _export(BuildContext context) =>
+      exportWorkspaceData(context, state);
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +141,11 @@ class _Brand extends StatelessWidget {
               SizedBox(height: 1),
               Text(
                 'HTTP / WEBSOCKET STUDIO',
-                style: TextStyle(fontSize: 7.5, letterSpacing: 1.5, color: AstraColors.faint),
+                style: TextStyle(
+                  fontSize: 7.5,
+                  letterSpacing: 1.5,
+                  color: AstraColors.faint,
+                ),
               ),
             ],
           ),
@@ -238,9 +189,7 @@ class _ModeSwitch extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
           gradient: active
-              ? LinearGradient(
-                  colors: [Color(0xFF7DD3FC), Color(0xFFA5B4FC)],
-                )
+              ? LinearGradient(colors: [Color(0xFF7DD3FC), Color(0xFFA5B4FC)])
               : null,
           borderRadius: BorderRadius.circular(8),
           boxShadow: active
@@ -439,7 +388,10 @@ class _IconAction extends StatelessWidget {
                   top: -4,
                   right: -6,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 3.5, vertical: 0.5),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 3.5,
+                      vertical: 0.5,
+                    ),
                     decoration: BoxDecoration(
                       color: AstraColors.accent,
                       borderRadius: BorderRadius.circular(99),
