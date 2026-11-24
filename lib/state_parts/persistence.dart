@@ -28,6 +28,8 @@ mixin _WorkspacePersistence on ChangeNotifier {
   set settings(AppSettings value);
   List<MonitorConfig> get monitors;
   set monitors(List<MonitorConfig> value);
+  MockServerConfig get mockServer;
+  set mockServer(MockServerConfig value);
   String get mode;
   set mode(String value);
   List<WorkspaceTab> get tabs;
@@ -143,6 +145,11 @@ mixin _WorkspacePersistence on ChangeNotifier {
             .map((item) => MonitorConfig.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
+      if (workspace['mockServer'] is Map) {
+        mockServer = MockServerConfig.fromJson(
+          Map<String, dynamic>.from(workspace['mockServer'] as Map),
+        );
+      }
     }
 
     var draft = await storage.read('draft.json');
@@ -203,6 +210,7 @@ mixin _WorkspacePersistence on ChangeNotifier {
       'globals': globals.map((item) => item.toJson()).toList(),
       'settings': settings.toJson(),
       'monitors': monitors.map((item) => item.toJson()).toList(),
+      'mockServer': mockServer.toJson(),
     };
     final data = await _redact(payload);
     if (seq != _persistSeq) return;

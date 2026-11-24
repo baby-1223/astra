@@ -5,8 +5,11 @@ import 'package:flutter/foundation.dart';
 
 import 'models.dart';
 import 'services/api_service.dart';
+import 'services/capture_proxy.dart';
 import 'services/converters.dart';
 import 'services/file_io.dart';
+import 'services/mock_certs.dart';
+import 'services/mock_server.dart';
 import 'services/oauth.dart';
 import 'services/script_service.dart';
 import 'services/secret_vault.dart';
@@ -17,12 +20,19 @@ part 'state_parts/curl.dart';
 part 'state_parts/import_export.dart';
 part 'state_parts/persistence.dart';
 part 'state_parts/runner.dart';
+part 'state_parts/traffic.dart';
 part 'state_parts/ws_session.dart';
 
 class AppState extends ChangeNotifier
-    with _WorkspacePersistence, _WorkspaceTransfer, _CurlTools, _RunnerTools, _WsSession {
+    with
+        _WorkspacePersistence,
+        _WorkspaceTransfer,
+        _CurlTools,
+        _RunnerTools,
+        _WsSession,
+        _TrafficTools {
   static const String appName = 'Astra';
-  static const String version = '2.1.7';
+  static const String version = '2.2.0';
 
   /// workspace.json / draft.json 的结构版本，加载时用于迁移。
   static const int workspaceSchemaVersion = 1;
@@ -140,6 +150,7 @@ class AppState extends ChangeNotifier
     activeEnvId = environments.first.id;
     storage.onError = _onStorageError;
     storage.onRecovered = (message) => showToast(message);
+    initTrafficTools();
   }
 
   Env get env {
@@ -1011,6 +1022,16 @@ class AppState extends ChangeNotifier
     showToast('Request created from cURL');
   }
 
+  /// 打开一个未保存的请求草稿（抓包回放等场景）。
+  void openLooseRequest(ApiRequest request, String name) {
+    if (mode != 'http') switchMode('http');
+    _createTab(name: name, targetMode: 'http', request: request);
+    pendingGroupId = '';
+    pendingFolderId = '';
+    notifyListeners();
+    _scheduleDraft();
+  }
+
   void openEntry(CollectionEntry entry) {
     final opened = tabs.where((tab) => tab.entryId == entry.id).firstOrNull;
     if (opened != null) {
@@ -1781,6 +1802,10 @@ class AppState extends ChangeNotifier
     }
     _sseSession?.close();
     wsService.close();
+    mockServerService.onChanged = null;
+    captureProxy.onChanged = null;
+    unawaited(mockServerService.stop());
+    unawaited(captureProxy.stop());
     super.dispose();
   }
 }

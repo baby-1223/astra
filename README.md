@@ -73,6 +73,21 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 - HTTP / SOCKS5 代理，按主机名绕过列表
 - mTLS 客户端证书（P12 + 口令）、关闭 TLS 校验、自定义超时
 
+### Mock Server 与抓包
+- **Mock Server**：本地 `127.0.0.1` HTTP 服务（默认 `6790`），给没有文档的接口直接造数据
+  - 任意方法（含 `ANY`），路径支持静态片段、`:param` 路径参数与尾部 `*` 通配
+  - 每条路由可配置状态码、响应头、Body 与延迟；运行中修改即时生效，无需重启
+  - 模板占位符：`{{param}}`、`{{query.x}}`、`{{header.x}}`、`{{body.a.b.0}}`
+  - 随机数据：`{{$guid}}`、`{{$randomInt}}`、`{{$randomFullName}}`、`{{$randomEmail}}`、`{{$randomCity}}`、`{{$randomBoolean}}`、`{{$timestamp}}`、`{{$isoTimestamp}}`
+  - 未匹配的请求返回 404 与当前可用路由列表；自动处理 CORS 与 `OPTIONS` 预检
+- **本地抓包代理**：监听 `127.0.0.1:6791`，把真实流量记录下来
+  - HTTP 直接转发；HTTPS 通过本地 CA 做 MITM 解密（可关闭为纯隧道模式）
+  - 可在界面导出 `astra-ca.pem`，加入系统信任后即可解密 HTTPS
+  - 记录请求 / 响应头、Body（超过 512 KB 标记截断）、状态码与耗时
+  - 记录一键 **Open as request** 回放到新标签页，或 **Create mock route** 直接生成 Mock
+- 集合请求右键 **Create Mock Route…**：优先使用已保存的响应示例作为 Mock 数据
+- 入口：顶部工具栏地球图标，或快捷键 `⌘/Ctrl + Shift + M`；Mock 配置随 `workspace.json` 持久化，抓包记录仅保存在内存
+
 ### 响应体验
 - JSON 树形浏览与键值搜索、展开 / 折叠 / 复制节点
 - Cookies 面板、事件流面板、脚本断言日志
@@ -98,18 +113,17 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 
 ---
 
-## 本次更新（v2.1.7）
+## 本次更新（v2.2.0）
 
-- 新增请求传输失败重试次数配置（0–10 次，仅重试连接/超时等传输错误，已返回的 4xx/5xx 不重试）
-- 变量面板支持粘贴 `.env` / CSV 批量导入，并可一键复制当前作用域为 `.env`
-- 新增工作区 / 草稿结构版本与自动迁移，兼容旧版数据
-- 保存失败提示、双备份轮转与主文件损坏自动恢复
-- 未保存草稿崩溃恢复，恢复时同步还原凭据
-- 敏感凭据迁移到系统凭据库，工作区只落盘占位符
-- 落盘写入串行化，避免并发保存覆盖新数据
-- 大响应虚拟滚动与截断提示，完整正文仍可导出
-- 非 UTF-8 响应自动解码（GBK / GB18030 / Big5 / ISO-8859-1）
-- 修复 macOS 发布工作流因 GitHub arm64 机池容量不足被取消的问题，增加 Intel 机池自动重试
+- 新增 **Mock Server**：本地建路由、造响应，支持路径参数 / 通配、延迟、CORS 与随机数据模板
+- 新增 **本地抓包代理**：HTTP 转发 + HTTPS MITM 解密，支持导出 CA、打开为请求、从抓包生成 Mock
+- 新增 **Traffic Studio** 面板（`⌘/Ctrl + Shift + M`），统一管理 Mock 路由与抓包记录
+- 集合请求右键菜单新增 **Create Mock Route…**，可直接把响应示例变成 Mock
+- Mock 配置随工作区持久化，并纳入 Astra 备份 / 恢复
+- 集合星标图标改为自绘五角星（实心 / 描边），端点与侧栏保持一致
+- 修复 Astra 备份在集合为空时被误判成 Postman dump、导入走错分支的问题
+- 修复导入备份时 Mock 端口未恢复、运行中的 Mock 服务未热更新的问题
+- macOS Release 构建补充 `com.apple.security.network.server` 权限，保证沙箱下可监听本地端口
 
 ---
 
@@ -191,8 +205,8 @@ Windows 脚本会自动完成环境检查、分析、测试、构建，并打包
 推送 `v*` 标签时两端产物会一起挂到 Releases：
 
 ```bash
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.2.0
+git push origin v2.2.0
 ```
 
 macOS 签名公证需要配置 `MACOS_CERT_P12`、`MACOS_CERT_PASSWORD`、`KEYCHAIN_PASSWORD`、`APPLE_ID`、`APPLE_APP_PASSWORD`、`APPLE_TEAM_ID` 六个 Secrets，未配置时自动跳过签名。
@@ -217,4 +231,4 @@ macOS 签名公证需要配置 `MACOS_CERT_P12`、`MACOS_CERT_PASSWORD`、`KEYCH
 
 ---
 
-<div align="center"><sub>Astra v2.1.7 · 用 Flutter 重写的桌面 API 调试工具</sub></div>
+<div align="center"><sub>Astra v2.2.0 · 用 Flutter 重写的桌面 API 调试工具</sub></div>

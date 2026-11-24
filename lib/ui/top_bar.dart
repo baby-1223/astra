@@ -6,6 +6,7 @@ import 'advanced_dialogs.dart';
 import 'dialogs.dart';
 import 'runner_dialog.dart';
 import 'theme.dart';
+import 'traffic_dialog.dart';
 import 'widgets.dart';
 
 class TopBar extends StatelessWidget {
@@ -56,6 +57,12 @@ class TopBar extends StatelessWidget {
             icon: Icons.lan_outlined,
             tooltip: 'Proxy & client certificates',
             onTap: () => showNetworkSettingsDialog(context, state),
+          ),
+          _IconAction(
+            icon: Icons.travel_explore,
+            tooltip: 'Mock Server & Traffic Capture',
+            badge: (state.mockServerRunning ? 1 : 0) + (state.captureProxyRunning ? 1 : 0),
+            onTap: () => showTrafficStudioDialog(context, state),
           ),
           _IconAction(
             icon: Icons.keyboard_outlined,

@@ -99,6 +99,9 @@ bool _isPostmanDump(Map data) {
 
 String detectKind(dynamic data) {
   if (data is! Map) return 'unknown';
+  // Astra 备份也包含 collections / environments，需先按自身标记识别，
+  // 否则空集合的备份会被误判成 Postman dump。
+  if (data['app'] == 'Astra' || data['schemaVersion'] != null) return 'astra';
   if (_isPostmanDump(data)) return 'postman';
   if (data['collections'] is List) return 'astra';
   if (data['openapi'] != null || data['swagger'] != null) return 'openapi';

@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 typedef StorageNotice = void Function(String message);
 
 class Storage {
-  Storage({this.onError, this.onRecovered});
+  Storage({this.onError, this.onRecovered, Directory? root}) : _dir = root;
 
   /// 持久化失败时回调，用于向用户提示，避免静默丢数据。
   StorageNotice? onError;
@@ -30,6 +30,9 @@ class Storage {
     _dir = dir;
     return dir;
   }
+
+  /// 应用数据目录，供证书等非 JSON 文件使用。
+  Future<Directory> directory() => _root();
 
   Future<Map<String, dynamic>?> read(String name) async {
     final dir = await _root();

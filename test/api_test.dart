@@ -150,7 +150,7 @@ void main() {
         }
         final socket = await WebSocketTransformer.upgrade(request);
         socket.listen((data) {
-          socket.add('echo:${data}');
+          socket.add('echo:$data');
         });
       });
 

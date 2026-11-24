@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -7,6 +9,7 @@ import 'bound_text_field.dart';
 import 'dialogs.dart';
 import 'runner_dialog.dart';
 import 'theme.dart';
+import 'traffic_dialog.dart';
 import 'widgets.dart';
 
 part 'sidebar/widgets.dart';
@@ -957,6 +960,14 @@ class _SidebarState extends State<Sidebar> {
           case 'examples':
             await showExamplesDialog(context, state, entry.id);
             break;
+          case 'mock':
+            await showTrafficStudioDialog(
+              context,
+              state,
+              initialTab: 'mock',
+              draftRoute: state.mockRouteForEntry(entry),
+            );
+            break;
           case 'delete':
             final ok = await showConfirmDialog(
               context,
@@ -972,6 +983,8 @@ class _SidebarState extends State<Sidebar> {
         PopupMenuItem(value: 'duplicate', height: 36, child: Text('Duplicate')),
         PopupMenuItem(value: 'move', height: 36, child: Text('Move to…')),
         PopupMenuItem(value: 'examples', height: 36, child: Text('Saved Examples')),
+        if (entry.mode == 'http')
+          PopupMenuItem(value: 'mock', height: 36, child: Text('Create Mock Route…')),
         PopupMenuDivider(),
         PopupMenuItem(
           value: 'delete',

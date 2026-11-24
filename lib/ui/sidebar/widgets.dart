@@ -328,11 +328,9 @@ class _GroupStarButtonState extends State<_GroupStarButton> {
             width: 18,
             height: 18,
             child: visible
-                ? Icon(
-                    widget.starred
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
+                ? _StarGlyph(
                     size: 15,
+                    filled: widget.starred,
                     color: widget.starred
                         ? const Color(0xFFF2A93B)
                         : AstraColors.faint,
@@ -373,13 +371,78 @@ class _StarFilterButton extends StatelessWidget {
                   : AstraColors.line,
             ),
           ),
-          child: Icon(
-            active ? Icons.star_rounded : Icons.star_outline_rounded,
+          child: _StarGlyph(
             size: 16,
+            filled: active,
             color: active ? AstraColors.accent : AstraColors.faint,
           ),
         ),
       ),
     );
   }
+}
+
+/// 五角星图标：用自绘路径保证尖角清晰，不依赖字体里的圆角星形。
+class _StarGlyph extends StatelessWidget {
+  final double size;
+  final bool filled;
+  final Color color;
+
+  const _StarGlyph({required this.size, required this.filled, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _StarPainter(filled: filled, color: color),
+      ),
+    );
+  }
+}
+
+class _StarPainter extends CustomPainter {
+  final bool filled;
+  final Color color;
+
+  const _StarPainter({required this.filled, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final outer = size.width / 2;
+    final inner = outer * 0.42;
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final radius = i.isEven ? outer : inner;
+      final angle = -math.pi / 2 + i * math.pi / 5;
+      final point = Offset(
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
+      );
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    if (filled) {
+      canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
+    } else {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarPainter oldDelegate) =>
+      oldDelegate.filled != filled || oldDelegate.color != color;
 }

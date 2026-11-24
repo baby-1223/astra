@@ -11,6 +11,7 @@ import 'ui/runner_dialog.dart';
 import 'ui/sidebar.dart';
 import 'ui/theme.dart';
 import 'ui/top_bar.dart';
+import 'ui/traffic_dialog.dart';
 import 'ui/ws_panel.dart';
 
 void main() {
@@ -255,6 +256,16 @@ class _AstraAppState extends State<AstraApp> {
                   state.newRequest,
               SingleActivator(LogicalKeyboardKey.keyN, control: true):
                   state.newRequest,
+              SingleActivator(
+                LogicalKeyboardKey.keyM,
+                meta: true,
+                shift: true,
+              ): () => showTrafficStudioDialog(context, state),
+              SingleActivator(
+                LogicalKeyboardKey.keyM,
+                control: true,
+                shift: true,
+              ): () => showTrafficStudioDialog(context, state),
               SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
                   state.selectRelativeTab(-1),
               SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () =>

@@ -1141,6 +1141,7 @@ Future<void> showShortcutsDialog(BuildContext context) async {
     ['⌥ + ← / →', 'Previous / next tab'],
     ['⌘ / Ctrl + Shift + V', 'Open Variables panel'],
     ['⌘ / Ctrl + Shift + R', 'Open Collection Runner'],
+    ['⌘ / Ctrl + Shift + M', 'Open Mock Server & Traffic Capture'],
     ['⌘ / Ctrl + K', 'Open Keyboard Shortcuts'],
     ['F2', 'Rename selected collection, folder or request'],
     ['⌘ / Ctrl + D', 'Duplicate selection'],

@@ -1106,6 +1106,127 @@ class MonitorConfig {
       );
 }
 
+/// 新建 Mock 路由时使用的示例响应，演示随机数据占位符。
+const String kSampleMockBody = r'''{
+  "id": "{{$guid}}",
+  "name": "{{$randomFullName}}",
+  "email": "{{$randomEmail}}",
+  "city": "{{$randomCity}}",
+  "active": {{$randomBoolean}},
+  "score": {{$randomInt}},
+  "createdAt": "{{$isoTimestamp}}"
+}''';
+
+/// Mock Server 中的一条接口规则。///
+/// [path] 支持静态片段、`:name` 路径参数和尾部 `*` 通配；
+/// [body] 支持 `{{name}}`、`{{query.x}}`、`{{header.x}}`、`{{body.x}}`
+/// 以及 `{{$randomXxx}}` 随机数据占位符。
+class MockRoute {
+  String id;
+  String name;
+  bool enabled;
+  String method; // ANY 表示匹配全部方法
+  String path;
+  int status;
+  String body;
+  List<KV> headers;
+  int delayMs;
+  String sourceEntryId;
+  int ts;
+
+  MockRoute({
+    String? id,
+    this.name = 'New mock route',
+    this.enabled = true,
+    this.method = 'GET',
+    this.path = '/',
+    this.status = 200,
+    this.body = '',
+    List<KV>? headers,
+    this.delayMs = 0,
+    this.sourceEntryId = '',
+    int? ts,
+  })  : id = id ?? newId(),
+        headers = headers ?? [KV()],
+        ts = ts ?? DateTime.now().millisecondsSinceEpoch;
+
+  MockRoute copy() => MockRoute(
+        id: id,
+        name: name,
+        enabled: enabled,
+        method: method,
+        path: path,
+        status: status,
+        body: body,
+        headers: headers.map((item) => item.copy()).toList(),
+        delayMs: delayMs,
+        sourceEntryId: sourceEntryId,
+        ts: ts,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'enabled': enabled,
+        'method': method,
+        'path': path,
+        'status': status,
+        'body': body,
+        'headers': headers.map((item) => item.toJson()).toList(),
+        'delayMs': delayMs,
+        'sourceEntryId': sourceEntryId,
+        'ts': ts,
+      };
+
+  factory MockRoute.fromJson(Map<String, dynamic> json) => MockRoute(
+        id: '${json['id'] ?? newId()}',
+        name: '${json['name'] ?? 'Mock route'}',
+        enabled: json['enabled'] != false,
+        method: '${json['method'] ?? 'GET'}'.toUpperCase(),
+        path: '${json['path'] ?? '/'}',
+        status: int.tryParse('${json['status'] ?? 200}') ?? 200,
+        body: '${json['body'] ?? ''}',
+        headers: json['headers'] is List
+            ? (json['headers'] as List)
+                .whereType<Map>()
+                .map((item) => KV.fromJson(Map<String, dynamic>.from(item)))
+                .toList()
+            : [KV()],
+        delayMs: int.tryParse('${json['delayMs'] ?? 0}') ?? 0,
+        sourceEntryId: '${json['sourceEntryId'] ?? ''}',
+        ts: int.tryParse('${json['ts'] ?? 0}') ?? 0,
+      );
+}
+
+/// Mock Server 的全局配置，随工作区一起持久化。
+class MockServerConfig {
+  int port;
+  List<MockRoute> routes;
+
+  MockServerConfig({this.port = 6790, List<MockRoute>? routes})
+      : routes = routes ?? [];
+
+  MockServerConfig copy() => MockServerConfig(
+        port: port,
+        routes: routes.map((item) => item.copy()).toList(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'port': port,
+        'routes': routes.map((item) => item.toJson()).toList(),
+      };
+
+  factory MockServerConfig.fromJson(Map<String, dynamic> json) => MockServerConfig(
+        port: int.tryParse('${json['port'] ?? 6790}') ?? 6790,
+        routes: json['routes'] is List
+            ? (json['routes'] as List)
+                .whereType<Map>()
+                .map((item) => MockRoute.fromJson(Map<String, dynamic>.from(item)))
+                .toList()
+            : [],
+      );
+}
+
 /// 变量面板中的一层作用域。
 class VariableScope {
   final String label;

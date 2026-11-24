@@ -14,6 +14,8 @@ mixin _WorkspaceTransfer on ChangeNotifier {
   AppSettings get settings;
   set settings(AppSettings value);
   List<MonitorConfig> get monitors;
+  MockServerConfig get mockServer;
+  MockServerService get mockServerService;
 
   void updateEnv(String name, List<KV> vars);
   void _syncMonitors();
@@ -34,6 +36,7 @@ mixin _WorkspaceTransfer on ChangeNotifier {
         'globals': globals.map((item) => item.toJson()).toList(),
         'settings': settings.toJson(),
         'monitors': monitors.map((item) => item.toJson()).toList(),
+        'mockServer': mockServer.toJson(),
       };
 
   Map<String, dynamic> exportPostman() => toPostman(collections, env);
@@ -175,10 +178,29 @@ mixin _WorkspaceTransfer on ChangeNotifier {
       }
       _syncMonitors();
     }
+    var importedMocks = 0;
+    if (data['mockServer'] is Map) {
+      final incoming = MockServerConfig.fromJson(
+        Map<String, dynamic>.from(data['mockServer'] as Map),
+      );
+      mockServer.port = incoming.port;
+      mockServerService.update(mockServer);
+      for (final route in incoming.routes) {
+        final index = mockServer.routes.indexWhere((item) => item.id == route.id);
+        if (index >= 0) {
+          mockServer.routes[index] = route;
+        } else {
+          mockServer.routes.add(route);
+        }
+        importedMocks += 1;
+      }
+      mockServerService.update(mockServer);
+    }
     notifyListeners();
     schedulePersist();
     final groupCount = rawGroups is List ? rawGroups.length : 0;
     final envCount = rawEnvs is List ? rawEnvs.length : 0;
-    return 'Imported $count requests, $groupCount collections, $envCount environments from Astra backup';
+    final suffix = importedMocks > 0 ? ', $importedMocks mock routes' : '';
+    return 'Imported $count requests, $groupCount collections, $envCount environments$suffix from Astra backup';
   }
 }
