@@ -21,7 +21,8 @@ jobs:
 
   build-macos-intel-fallback:
     needs: build-macos
-    if: failure()
+    # 排队超时被 GitHub 取消时 failure() 为 false，必须用 always() 判断结果。
+    if: always() && needs.build-macos.result != 'success'
     uses: ./.github/workflows/build-macos-app.yml
     with:
       runner: macos-26-intel
