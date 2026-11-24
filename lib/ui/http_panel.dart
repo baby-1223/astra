@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models.dart';
+import '../services/codegen.dart';
 import '../services/file_io.dart';
 import '../state.dart';
 import 'advanced_dialogs.dart';
@@ -14,6 +15,9 @@ import 'runner_dialog.dart';
 import 'script_editor.dart';
 import 'theme.dart';
 import 'widgets.dart';
+
+part 'http_panel/panels.dart';
+part 'http_panel/editors.dart';
 
 List<String> _commonHeaders = [
   'Accept',
@@ -165,14 +169,22 @@ class _HttpViewState extends State<HttpView> {
                 onSelected: (value) async {
                   if (value == 'import') {
                     await showCurlImportDialog(context, state);
-                  } else {
+                  } else if (value == 'curl-export') {
                     await Clipboard.setData(ClipboardData(text: state.curlFor(state.request)));
                     state.showToast('cURL copied to clipboard');
+                  } else {
+                    await _copyCode(CodeLanguage.values.byName(value));
                   }
                 },
                 itemBuilder: (context) => [
                   PopupMenuItem(value: 'import', height: 38, child: Text('Import from cURL')),
-                  PopupMenuItem(value: 'export', height: 38, child: Text('Copy as cURL')),
+                  PopupMenuItem(value: 'curl-export', height: 38, child: Text('Copy as cURL')),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(value: 'python', height: 38, child: Text('Copy as Python')),
+                  PopupMenuItem(value: 'javascript', height: 38, child: Text('Copy as JavaScript')),
+                  PopupMenuItem(value: 'go', height: 38, child: Text('Copy as Go')),
+                  PopupMenuItem(value: 'java', height: 38, child: Text('Copy as Java')),
+                  PopupMenuItem(value: 'httpClient', height: 38, child: Text('Copy as HTTP Client')),
                 ],
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -290,6 +302,26 @@ class _HttpViewState extends State<HttpView> {
         ],
       ),
     );
+  }
+
+  /// 把当前请求复制为指定语言的代码片段。
+  Future<void> _copyCode(CodeLanguage language) async {
+    final req = state.request;
+    String url;
+    try {
+      url = state.buildUrl(req);
+    } catch (_) {
+      url = req.url;
+    }
+    final text = generateCode(
+      req.method,
+      url,
+      state.collectHeaders(req),
+      state.buildBody(req),
+      language,
+    );
+    await Clipboard.setData(ClipboardData(text: text));
+    state.showToast('${codeLanguageLabel(language)} snippet copied to clipboard');
   }
 
   String _bodyLabel(String mode) {
@@ -1212,6 +1244,37 @@ class _HttpViewState extends State<HttpView> {
             ],
           ),
         ),
+        Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Retries', style: TextStyle(fontSize: 12.5)),
+                    SizedBox(height: 2),
+                    Text('Extra attempts after network errors (max 10)',
+                        style: TextStyle(fontSize: 10.5, color: AstraColors.faint)),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 110,
+                child: BoundTextField(
+                  value: req.options.retries.toString(),
+                  hint: '0',
+                  onChanged: (value) {
+                    final parsed = int.tryParse(value.trim());
+                    if (parsed == null || parsed < 0 || parsed > 10) return;
+                    req.options.retries = parsed;
+                    state.touch();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -1381,11 +1444,11 @@ class _HttpViewState extends State<HttpView> {
       if (state.sseRunning || state.sseLog.isNotEmpty) 'sse',
     ];
     if (available.isNotEmpty && !available.contains(_respTab)) {
-      return _scriptResultPanel();
+      return _scriptResultPanel(state);
     }
-    if (_respTab == 'scripts') return _scriptResultPanel();
-    if (_respTab == 'cookies') return _cookiesPanel();
-    if (_respTab == 'sse') return _ssePanel();
+    if (_respTab == 'scripts') return _scriptResultPanel(state);
+    if (_respTab == 'cookies') return _cookiesPanel(state);
+    if (_respTab == 'sse') return _ssePanel(state);
     final error = state.responseError;
     if (error != null) {
       return Padding(
@@ -1839,665 +1902,6 @@ class _HttpViewState extends State<HttpView> {
         child: Padding(
           padding: EdgeInsets.all(6),
           child: Icon(icon, size: 14, color: AstraColors.muted),
-        ),
-      ),
-    );
-  }
-
-  Widget _cookiesPanel() {
-    final list = state.responseCookies;
-    if (list.isEmpty) {
-      return EmptyHint(
-        icon: Icons.cookie_outlined,
-        title: 'No cookies received',
-        subtitle: 'Set-Cookie headers from the response will appear here',
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: 8, bottom: 6),
-          child: Row(
-            children: [
-              Icon(Icons.cookie_outlined, size: 13, color: AstraColors.accent),
-              SizedBox(width: 6),
-              Text(
-                '${list.length} cookies',
-                style: TextStyle(fontSize: 11, color: AstraColors.muted),
-              ),
-              Spacer(),
-              CopyButton(
-                text: list
-                    .map((item) =>
-                        '${item.name}=${item.value}; domain=${item.domain}; path=${item.path}')
-                    .join('\n'),
-                tooltip: 'Copy all cookies',
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (context, index) {
-              final cookie = list[index];
-              return Container(
-                margin: EdgeInsets.only(bottom: 7),
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AstraColors.overlay,
-                  border: Border.all(color: AstraColors.line),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            cookie.name,
-                            style: monoStyle(size: 11.5, color: AstraColors.accent),
-                          ),
-                        ),
-                        if (cookie.secure)
-                          _CookieTag('Secure', AstraColors.ok),
-                        if (cookie.httpOnly) _CookieTag('HttpOnly', AstraColors.accent),
-                        if (cookie.expired)
-                          _CookieTag('Expired', AstraColors.err),
-                      ],
-                    ),
-                    SizedBox(height: 4),
-                    SelectableText(
-                      cookie.value,
-                      style: monoStyle(size: 11, color: AstraColors.codeText, height: 1.5),
-                    ),
-                    if (cookie.domain.isNotEmpty || cookie.path.isNotEmpty) ...[
-                      SizedBox(height: 3),
-                      Text(
-                        '${cookie.domain.isEmpty ? '-' : cookie.domain}${cookie.path}',
-                        style: monoStyle(size: 10, color: AstraColors.faint),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _ssePanel() {
-    final events = state.sseLog;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: 8, bottom: 6),
-          child: Row(
-            children: [
-              Icon(
-                state.sseRunning ? Icons.sensors : Icons.sensors_off,
-                size: 13,
-                color: state.sseRunning ? AstraColors.ok : AstraColors.faint,
-              ),
-              SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  state.sseStatus ?? 'Waiting for events…',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: state.sseRunning ? AstraColors.ok : AstraColors.muted,
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                '${events.length} events',
-                style: TextStyle(fontSize: 10.5, color: AstraColors.faint),
-              ),
-              Spacer(),
-              CopyButton(
-                text: events
-                    .map((item) => 'event: ${item.event}\ndata: ${item.data}')
-                    .join('\n\n'),
-                tooltip: 'Copy event stream',
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: events.isEmpty
-              ? Center(
-                  child: Text(
-                    'Waiting for server events…',
-                    style: TextStyle(fontSize: 11.5, color: AstraColors.faint),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    final time = event.time;
-                    final stamp =
-                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: 7),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 58,
-                            child: Text(
-                              stamp,
-                              style: monoStyle(size: 10, color: AstraColors.faint),
-                            ),
-                          ),
-                          Container(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: AstraColors.accent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              event.event,
-                              style: monoStyle(size: 9.5, color: AstraColors.accent),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: SelectableText(
-                              event.data,
-                              style: monoStyle(
-                                size: 11.2,
-                                color: AstraColors.codeText,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _scriptResultPanel() {
-    final logs = state.scriptLogs;
-    final tests = state.scriptTests;
-    final error = state.scriptError;
-    if (!state.scriptRan) {
-      return EmptyHint(
-        icon: Icons.code_rounded,
-        title: 'No scripts run yet',
-        subtitle: 'Add pre-request or post-response scripts in the Scripts tab\nConsole output and test results will appear here after sending',
-      );
-    }
-    if (error == null && logs.isEmpty && tests.isEmpty) {
-      return EmptyHint(
-        icon: Icons.check_circle_outline,
-        title: 'Script run complete',
-        subtitle: 'No console output or test results',
-      );
-    }
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(top: 10, bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (error != null)
-            Container(
-              margin: EdgeInsets.only(bottom: 10),
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: AstraColors.errSoft,
-                border: Border.all(color: AstraColors.errBorder),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.error_outline, size: 14, color: AstraColors.err),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: SelectableText(
-                      error,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AstraColors.err,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (tests.isNotEmpty) ...[
-            SectionLabel('Test results'),
-            ...tests.map((test) {
-              final color = test.passed ? AstraColors.ok : AstraColors.err;
-              return Padding(
-                padding: EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      test.passed ? Icons.check_circle_outline : Icons.cancel_outlined,
-                      size: 13,
-                      color: color,
-                    ),
-                    SizedBox(width: 7),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            test.name,
-                            style: TextStyle(fontSize: 11.5, color: color, height: 1.45),
-                          ),
-                          if (test.error != null)
-                            Text(
-                              test.error!,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: AstraColors.muted,
-                                height: 1.45,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            SizedBox(height: 6),
-          ],
-          if (logs.isNotEmpty) ...[
-            SectionLabel('Console'),
-            ...logs.map((log) {
-              final color = switch (log.level) {
-                'warn' => AstraColors.warn,
-                'error' => AstraColors.err,
-                _ => AstraColors.codeText,
-              };
-              return Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 34,
-                      child: Text(
-                        log.level,
-                        style: monoStyle(size: 10, color: AstraColors.faint),
-                      ),
-                    ),
-                    Expanded(
-                      child: SelectableText(
-                        log.message.isEmpty ? '(empty)' : log.message,
-                        style: monoStyle(size: 11.3, color: color, height: 1.55),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _textBlock(String text) {
-    final clipped = text.length > 4000000 ? '${text.substring(0, 4000000)}\n\n… Content too long, truncated' : text;
-    final show = clipped.isEmpty ? '(empty response)' : clipped;
-    final lines = show.split('\n');
-    if (lines.length <= 400) {
-      return SingleChildScrollView(
-        padding: EdgeInsets.only(top: 10, bottom: 8),
-        child: Container(
-          alignment: Alignment.topLeft,
-          width: double.infinity,
-          child: SelectableText(
-            show,
-            textAlign: TextAlign.left,
-            style: monoStyle(size: 11.8, height: 1.6, color: AstraColors.codeText),
-          ),
-        ),
-      );
-    }
-    // 大响应按行虚拟滚动，避免一次性构建整段文本造成卡顿
-    return ListView.builder(
-      padding: EdgeInsets.only(top: 10, bottom: 8),
-      itemCount: lines.length,
-      itemBuilder: (context, index) => SelectableText(
-        lines[index].isEmpty ? ' ' : lines[index],
-        style: monoStyle(size: 11.8, height: 1.6, color: AstraColors.codeText),
-      ),
-    );
-  }
-}
-
-class _CookieTag extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  _CookieTag(this.label, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(left: 5),
-      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(label, style: monoStyle(size: 9, color: color)),
-    );
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* 方法选择器                                                          */
-/* ------------------------------------------------------------------ */
-
-class _MethodSelector extends StatelessWidget {
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  _MethodSelector({required this.value, required this.onChanged});
-
-  static const List<String> methods = [
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'HEAD',
-    'OPTIONS',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final current = methods.contains(value) ? value : 'GET';
-    return PopupMenuButton<String>(
-      tooltip: 'Request method',
-      initialValue: current,
-      position: PopupMenuPosition.under,
-      color: AstraColors.surface2,
-      padding: EdgeInsets.zero,
-      constraints: BoxConstraints(minWidth: 100, maxWidth: 160),
-      onSelected: onChanged,
-      itemBuilder: (context) => [
-        for (final method in methods)
-          PopupMenuItem<String>(
-            value: method,
-            height: 34,
-            child: Text(
-              method,
-              style: monoStyle(
-                size: 13,
-                color: methodColor(method),
-                weight: FontWeight.w700,
-              ),
-            ),
-          ),
-      ],
-      child: Container(
-        width: 100,
-        height: 32,
-        padding: EdgeInsets.only(left: 9, right: 6),
-        decoration: BoxDecoration(
-          color: AstraColors.inset,
-          border: Border.all(color: AstraColors.line),
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                current,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: monoStyle(
-                  size: 13,
-                  color: methodColor(current),
-                  weight: FontWeight.w700,
-                ),
-              ),
-            ),
-            Icon(Icons.expand_more, size: 15, color: AstraColors.faint),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* multipart 编辑器                                                    */
-/* ------------------------------------------------------------------ */
-
-class _FormDataEditor extends StatelessWidget {
-  final List<FormRow> rows;
-  final VoidCallback onChanged;
-
-  _FormDataEditor({required this.rows, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ...List.generate(rows.length, (index) {
-          final row = rows[index];
-          return _FormDataRow(
-            key: ObjectKey(row),
-            row: row,
-            onChanged: onChanged,
-            onRemove: () {
-              rows.removeAt(index);
-              onChanged();
-            },
-          );
-        }),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: () {
-              rows.add(FormRow());
-              onChanged();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AstraColors.muted,
-              textStyle: TextStyle(fontSize: 11.5),
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            ),
-            icon: Icon(Icons.add, size: 14),
-            label: Text('Add field'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FormDataRow extends StatefulWidget {
-  final FormRow row;
-  final VoidCallback onChanged;
-  final VoidCallback onRemove;
-
-  _FormDataRow({
-    super.key,
-    required this.row,
-    required this.onChanged,
-    required this.onRemove,
-  });
-
-  @override
-  State<_FormDataRow> createState() => _FormDataRowState();
-}
-
-class _FormDataRowState extends State<_FormDataRow> {
-  late final TextEditingController _key = TextEditingController(text: widget.row.k);
-  late final TextEditingController _value = TextEditingController(text: widget.row.v);
-
-  @override
-  void dispose() {
-    _key.dispose();
-    _value.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pick() async {
-    final picked = await pickUploadFile();
-    if (picked == null) return;
-    setState(() => widget.row.file = picked);
-    widget.onChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final row = widget.row;
-    final isFile = row.type == 'file';
-    return Padding(
-      padding: EdgeInsets.only(bottom: 7),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 30,
-            child: Transform.scale(
-              scale: 0.78,
-              child: Checkbox(
-                value: row.on,
-                activeColor: AstraColors.accent,
-                side: BorderSide(color: AstraColors.lineStrong),
-                onChanged: (value) {
-                  setState(() => row.on = value ?? false);
-                  widget.onChanged();
-                },
-              ),
-            ),
-          ),
-          SizedBox(width: 6),
-          Expanded(
-            flex: 5,
-            child: TextField(
-              controller: _key,
-              style: monoStyle(size: 12),
-              decoration: astraInput(
-                hint: 'Field name',
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              ),
-              onChanged: (value) {
-                row.k = value;
-                widget.onChanged();
-              },
-            ),
-          ),
-          SizedBox(width: 7),
-          GestureDetector(
-            onTap: () {
-              setState(() => row.type = isFile ? 'text' : 'file');
-              widget.onChanged();
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 9, vertical: 10),
-              decoration: BoxDecoration(
-                color: isFile ? AstraColors.accent2Soft : AstraColors.overlay,
-                border: Border.all(color: isFile ? AstraColors.accent2Soft : AstraColors.line),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                isFile ? 'File' : 'Text',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isFile ? AstraColors.codeKeyword : AstraColors.muted,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 7),
-          Expanded(
-            flex: 8,
-            child: isFile
-                ? _fileBox(row)
-                : TextField(
-                    controller: _value,
-                    style: monoStyle(size: 12),
-                    decoration: astraInput(
-                      hint: 'Field value (supports {{variables}})',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                    onChanged: (value) {
-                      row.v = value;
-                      widget.onChanged();
-                    },
-                  ),
-          ),
-          SizedBox(
-            width: 32,
-            child: IconButton(
-              tooltip: 'Delete row',
-              onPressed: widget.onRemove,
-              icon: Icon(Icons.close, size: 15),
-              color: AstraColors.faint,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fileBox(FormRow row) {
-    final file = row.file;
-    final ready = file != null && file.usable;
-    return InkWell(
-      onTap: _pick,
-      borderRadius: BorderRadius.circular(9),
-      child: Container(
-        height: 38,
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AstraColors.inset,
-          border: Border.all(color: ready ? AstraColors.accent2Soft : AstraColors.line),
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              ready ? Icons.insert_drive_file_outlined : Icons.upload_file_outlined,
-              size: 15,
-              color: ready ? AstraColors.codeKeyword : AstraColors.faint,
-            ),
-            SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                file == null
-                    ? 'Choose file'
-                    : file.usable
-                        ? '${file.name} · ${formatBytes(file.size)}'
-                        : '${file.name} (needs re-selection)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: ready ? AstraColors.text : AstraColors.muted,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

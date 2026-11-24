@@ -208,12 +208,16 @@ class RequestOptions {
   bool streamSse;
   int timeoutSeconds; // 0 表示不限制
 
+  /// 传输失败后的额外尝试次数（0–10）。
+  int retries;
+
   RequestOptions({
     this.followRedirects = true,
     this.rejectUnauthorized = true,
     this.manageCookies = true,
     this.streamSse = false,
     this.timeoutSeconds = 90,
+    this.retries = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -222,6 +226,7 @@ class RequestOptions {
         'manageCookies': manageCookies,
         'streamSse': streamSse,
         'timeoutSeconds': timeoutSeconds,
+        'retries': retries,
       };
 
   factory RequestOptions.fromJson(Map<String, dynamic> json) => RequestOptions(
@@ -230,6 +235,7 @@ class RequestOptions {
         manageCookies: json['manageCookies'] != false,
         streamSse: json['streamSse'] == true,
         timeoutSeconds: int.tryParse('${json['timeoutSeconds'] ?? 90}') ?? 90,
+        retries: int.tryParse('${json['retries'] ?? 0}') ?? 0,
       );
 }
 
@@ -313,6 +319,7 @@ class ApiRequest {
           manageCookies: options.manageCookies,
           streamSse: options.streamSse,
           timeoutSeconds: options.timeoutSeconds,
+          retries: options.retries,
         ),
       );
 
@@ -835,6 +842,10 @@ class HttpResult {
   final int ms;
   final int size;
 
+  /// 大响应不做 JSON 格式化，避免每次 build 重复解码造成卡顿。
+  static const int maxPrettyChars = 2000000;
+  String? _prettyCache;
+
   HttpResult({
     required this.status,
     required this.reason,
@@ -866,16 +877,19 @@ class HttpResult {
   }
 
   String get prettyBody {
+    final cached = _prettyCache;
+    if (cached != null) return cached;
     final raw = text;
-    if (raw == null) return '';
+    if (raw == null) return _prettyCache = '';
+    if (raw.length > maxPrettyChars) return _prettyCache = raw;
     final type = (header('content-type') ?? '').toLowerCase();
     if (!type.contains('json') && !raw.trimLeft().startsWith('{') && !raw.trimLeft().startsWith('[')) {
-      return raw;
+      return _prettyCache = raw;
     }
     try {
-      return const JsonEncoder.withIndent('  ').convert(jsonDecode(raw));
+      return _prettyCache = const JsonEncoder.withIndent('  ').convert(jsonDecode(raw));
     } catch (_) {
-      return raw;
+      return _prettyCache = raw;
     }
   }
 

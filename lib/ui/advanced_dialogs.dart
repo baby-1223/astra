@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models.dart';
+import '../services/env_vars.dart';
 import '../state.dart';
 import 'bound_text_field.dart';
 import 'dialogs.dart';
@@ -183,6 +184,40 @@ Future<void> showVariablesDialog(BuildContext context, AppState state) async {
                               padding:
                                   EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               onPressed: () => showEnvManagerDialog(ctx, state),
+                            ),
+                          ],
+                          if (!current.readOnly) ...[
+                            SizedBox(width: 8),
+                            GhostButton(
+                              label: 'Import .env / CSV',
+                              icon: Icons.upload_file,
+                              padding:
+                                  EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              onPressed: () async {
+                                final rows = await showVariableImportDialog(ctx);
+                                if (rows == null || rows.isEmpty) return;
+                                setLocal(() {
+                                  _mergeVariableRows(current.rows, rows);
+                                });
+                                if (current.onChanged != null) {
+                                  current.onChanged!(current.rows);
+                                } else if (current.label.startsWith('Environment')) {
+                                  state.setActiveEnvVars(current.rows);
+                                }
+                                state.showToast('Imported ${rows.length} variable(s)');
+                              },
+                            ),
+                            SizedBox(width: 8),
+                            GhostButton(
+                              label: 'Copy .env',
+                              icon: Icons.copy_all,
+                              padding:
+                                  EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              onPressed: () async {
+                                final text = toDotEnv(current.rows);
+                                await Clipboard.setData(ClipboardData(text: text));
+                                state.showToast('Copied .env to clipboard');
+                              },
                             ),
                           ],
                         ],
@@ -1650,4 +1685,79 @@ Future<void> showMonitorsDialog(
       ),
     ),
   );
+}
+
+/// 导入时按变量名合并：已存在的变量更新值，新变量追加到末尾。
+void _mergeVariableRows(List<KV> target, List<KV> incoming) {
+  for (final row in incoming) {
+    final key = row.k.trim();
+    if (key.isEmpty) continue;
+    final index = target.indexWhere((item) => item.k.trim() == key);
+    if (index >= 0) {
+      target[index]
+        ..v = row.v
+        ..on = true;
+    } else {
+      target.add(row);
+    }
+  }
+}
+
+/// 粘贴 `.env` 或 CSV 文本，解析为变量行；取消时返回 null。
+Future<List<KV>?> showVariableImportDialog(BuildContext context) async {
+  final controller = TextEditingController();
+  String? error;
+  final parsed = await showDialog<List<KV>>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setLocal) => AstraDialogShell(
+        title: 'Import variables',
+        subtitle: 'Paste a .env file (KEY=VALUE per line) or CSV rows (key,value). '
+            'Lines starting with # are ignored; existing variables are updated.',
+        width: 640,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              minLines: 8,
+              maxLines: 14,
+              autofocus: true,
+              style: monoStyle(size: 11.5, height: 1.5),
+              decoration: astraInput(
+                hint: 'BASE_URL=https://api.example.com\nAPI_TOKEN="abc 123"\n\n# or CSV\nkey,value\nBASE_URL,https://api.example.com',
+                contentPadding: const EdgeInsets.all(11),
+              ),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 10),
+              Text(error!, style: TextStyle(fontSize: 11.5, color: AstraColors.err)),
+            ],
+          ],
+        ),
+        actions: [
+          GhostButton(
+            label: 'Cancel',
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          const SizedBox(width: 8),
+          GradientButton(
+            label: 'Import',
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+            onPressed: () {
+              final rows = parseVariableText(controller.text);
+              if (rows.isEmpty) {
+                setLocal(() => error = 'No KEY=VALUE or CSV rows found');
+                return;
+              }
+              Navigator.of(ctx).pop(rows);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+  controller.dispose();
+  return parsed;
 }

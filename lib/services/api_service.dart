@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:enough_convert/enough_convert.dart';
+
 import '../models.dart';
 
 class HttpFailure implements Exception {
@@ -120,7 +122,51 @@ void mergeCookies(List<CookieEntry> jar, List<CookieEntry> incoming) {
 }
 
 class HttpService {
+  /// 发送请求；仅对传输层失败重试，已返回的 4xx/5xx 不重试，避免重复写入。
   Future<HttpResult> send({
+    required String method,
+    required String url,
+    required Map<String, String> headers,
+    required String body,
+    required List<FormRow> multipart,
+    required bool followRedirects,
+    required bool rejectUnauthorized,
+    required List<CookieEntry> cookies,
+    void Function(List<CookieEntry>)? onCookies,
+    Duration timeout = const Duration(seconds: 90),
+    AppSettings? settings,
+    Uint8List? rawBody,
+    int retries = 0,
+  }) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.host.isEmpty) {
+      throw HttpFailure('Invalid request URL');
+    }
+    final attempts = retries.clamp(0, 10) + 1;
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _sendOnce(
+          method: method,
+          url: url,
+          headers: headers,
+          body: body,
+          multipart: multipart,
+          followRedirects: followRedirects,
+          rejectUnauthorized: rejectUnauthorized,
+          cookies: cookies,
+          onCookies: onCookies,
+          timeout: timeout,
+          settings: settings,
+          rawBody: rawBody,
+        );
+      } on HttpFailure {
+        if (attempt >= attempts) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+    }
+  }
+
+  Future<HttpResult> _sendOnce({
     required String method,
     required String url,
     required Map<String, String> headers,
@@ -398,10 +444,43 @@ class HttpService {
     if (charset == 'latin1' || charset == 'iso-8859-1') {
       return latin1.decode(bytes);
     }
+    if (charset == 'gbk' || charset == 'gb2312' || charset == 'gb18030') {
+      return gbk.decode(bytes, allowInvalid: true);
+    }
+    if (charset == 'big5') {
+      try {
+        return big5.decode(bytes);
+      } on FormatException {
+        return latin1.decode(bytes);
+      }
+    }
+    if (charset == 'utf-8' || charset == 'utf8') {
+      return _utf8OrLatin1(bytes);
+    }
     try {
-      return utf8.decode(bytes, allowMalformed: true);
+      return _utf8OrLatin1(bytes);
     } catch (_) {
       return latin1.decode(bytes);
+    }
+  }
+
+  String _utf8OrLatin1(Uint8List bytes) {
+    var start = 0;
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xEF &&
+        bytes[1] == 0xBB &&
+        bytes[2] == 0xBF) {
+      start = 3;
+    }
+    try {
+      return utf8.decode(bytes.sublist(start));
+    } on FormatException {
+      // GBK 页面经常不带 charset，UTF-8 校验失败后按 GBK 再试一次。
+      try {
+        return gbk.decode(bytes.sublist(start));
+      } on FormatException {
+        return latin1.decode(bytes.sublist(start));
+      }
     }
   }
 

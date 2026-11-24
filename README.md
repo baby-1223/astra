@@ -81,11 +81,35 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 - cURL 一键导入 / 导出
 - 集合星标：点击集合行右侧星标即可置顶，搜索框右侧可切换「仅看星标」
 
+### 稳定性与数据安全
+- 工作区与草稿带 `schemaVersion`，升级后自动迁移旧文件，不会因为结构变化丢数据
+- 保存失败会明确提示；每次写入轮转 `workspace.json.bak` / `.bak1`，主文件损坏时自动从备份恢复
+- 未保存的请求标签实时写入 `draft.json`，崩溃、强制退出或重装后重新打开可恢复草稿
+- Token、密码、API Key、OAuth Client Secret / Refresh Token 存入 macOS Keychain / Windows Credential Manager，工作区文件只保留 `secure:` 占位符
+- 落盘写入串行化，避免异步保存乱序时旧数据覆盖新数据
+- 大响应按行虚拟滚动，渲染上限 400 万字符并提示截断；通过「保存响应」仍可导出完整正文
+- 按 `Content-Type` 与响应字节自动识别 UTF-8 / GBK / GB18030 / Big5 / ISO-8859-1；缺少 charset 的 GBK 响应会回退解码，不再乱码
+
 ### 星标与导入导出的兼容性
 - 星标是本地界面偏好，保存在 `workspace.json`；Astra 自身的备份 / 导出会保留它
 - Postman / Insomnia 没有星标概念：导出到这两种格式时不写入星标，从它们导入的集合一律为未星标
 - 导入以追加方式创建新集合，重复导入不会覆盖已有集合，也不会清掉你本地已设置的星标
 - 星标不影响请求执行、Collection Runner、变量解析与导入导出结果
+
+---
+
+## 本次更新（v2.1.7）
+
+- 新增请求传输失败重试次数配置（0–10 次，仅重试连接/超时等传输错误，已返回的 4xx/5xx 不重试）
+- 变量面板支持粘贴 `.env` / CSV 批量导入，并可一键复制当前作用域为 `.env`
+- 新增工作区 / 草稿结构版本与自动迁移，兼容旧版数据
+- 保存失败提示、双备份轮转与主文件损坏自动恢复
+- 未保存草稿崩溃恢复，恢复时同步还原凭据
+- 敏感凭据迁移到系统凭据库，工作区只落盘占位符
+- 落盘写入串行化，避免并发保存覆盖新数据
+- 大响应虚拟滚动与截断提示，完整正文仍可导出
+- 非 UTF-8 响应自动解码（GBK / GB18030 / Big5 / ISO-8859-1）
+- 修复 macOS 发布工作流因 GitHub arm64 机池容量不足被取消的问题，增加 Intel 机池自动重试
 
 ---
 
@@ -118,7 +142,7 @@ macOS 未签名版本首次打开需右键 → **打开**，或执行：
 xattr -dr com.apple.quarantine /Applications/astra.app
 ```
 
-数据保存在系统应用支持目录下的 `Astra/`（`workspace.json` 为集合与环境，`draft.json` 为未保存草稿），重装不丢失。
+数据保存在系统应用支持目录下的 `Astra/`（`workspace.json` 为集合与环境，`draft.json` 为未保存草稿），重装不丢失。写入时会自动保留 `workspace.json.bak` 与 `.bak1` 两份备份；敏感凭据保存在系统凭据库，不写入这两个文件。
 
 ---
 
@@ -162,7 +186,7 @@ Windows 脚本会自动完成环境检查、分析、测试、构建，并打包
 | 工作流 | 触发 | 产物 |
 |---|---|---|
 | [Build Windows](.github/workflows/build-windows.yml) | push / PR / 手动 / `v*` 标签 | `Astra-win-x64.zip` |
-| [Build macOS](.github/workflows/build-macos.yml) | 手动 / `v*` 标签 | `Astra-macos.zip`（配置 Secrets 后自动签名 + 公证） |
+| [Build macOS](.github/workflows/build-macos.yml) | 手动 / `v*` 标签 | `Astra-macos.zip`（配置 Secrets 后自动签名 + 公证；arm64 机池排队失败时自动切换 Intel 机池重试） |
 
 推送 `v*` 标签时两端产物会一起挂到 Releases：
 
@@ -193,4 +217,4 @@ macOS 签名公证需要配置 `MACOS_CERT_P12`、`MACOS_CERT_PASSWORD`、`KEYCH
 
 ---
 
-<div align="center"><sub>Astra v2.0.0 · 用 Flutter 重写的桌面 API 调试工具</sub></div>
+<div align="center"><sub>Astra v2.1.7 · 用 Flutter 重写的桌面 API 调试工具</sub></div>
