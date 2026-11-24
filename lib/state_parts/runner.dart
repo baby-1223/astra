@@ -54,7 +54,7 @@ mixin _RunnerTools on ChangeNotifier {
   Map<String, String> _collectionVars(String groupId);
   String _normalizeBodyMode(String mode, String body);
   bool _hasHeader(Map<String, String> headers, String name);
-  void _schedulePersist();
+  void schedulePersist();
 
   List<CollectionEntry> runnerEntries(String groupId, {String folderId = ''}) {
     final result = <CollectionEntry>[];
@@ -183,7 +183,7 @@ mixin _RunnerTools on ChangeNotifier {
     );
     lastReport = report;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return report;
   }
 
@@ -399,7 +399,7 @@ mixin _RunnerTools on ChangeNotifier {
     monitors.add(monitor);
     _syncMonitors();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return monitor;
   }
 
@@ -409,14 +409,14 @@ mixin _RunnerTools on ChangeNotifier {
     monitors[index] = next;
     _syncMonitors();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void deleteMonitor(String id) {
     monitors.removeWhere((item) => item.id == id);
     _syncMonitors();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   Future<void> runMonitorNow(MonitorConfig monitor) async {
@@ -437,7 +437,7 @@ mixin _RunnerTools on ChangeNotifier {
         ..lastError = '$err';
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void _syncMonitors() {

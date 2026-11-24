@@ -528,7 +528,7 @@ class AppState extends ChangeNotifier
     } finally {
       sending = false;
       notifyListeners();
-      _schedulePersist();
+      schedulePersist();
     }
   }
 
@@ -604,7 +604,7 @@ class AppState extends ChangeNotifier
           sseRunning = false;
           _sseSession = null;
           notifyListeners();
-          _schedulePersist();
+          schedulePersist();
         },
       );
     } catch (err) {
@@ -779,7 +779,7 @@ class AppState extends ChangeNotifier
     }
     notifyListeners();
     _scheduleDraft();
-    _schedulePersist();
+    schedulePersist();
     return null;
   }
 
@@ -1116,7 +1116,7 @@ class AppState extends ChangeNotifier
     pendingGroupId = targetGroup;
     pendingFolderId = targetFolder;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     _scheduleDraft();
   }
 
@@ -1127,7 +1127,7 @@ class AppState extends ChangeNotifier
     }
     if (selectedId == id) selectedId = null;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   List<HistoryEntry> historyFor(String targetMode) =>
@@ -1136,19 +1136,19 @@ class AppState extends ChangeNotifier
   void deleteHistoryEntry(String id) {
     history.removeWhere((item) => item.id == id);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void deleteHistoryEntries(Set<String> ids) {
     history.removeWhere((item) => ids.contains(item.id));
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void clearHistory() {
     history.clear();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   /* ------------------------------------------------------------------ */
@@ -1168,7 +1168,7 @@ class AppState extends ChangeNotifier
     );
     groups.add(group);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return group;
   }
 
@@ -1177,7 +1177,7 @@ class AppState extends ChangeNotifier
     if (group == null) return;
     group.name = name.trim().isEmpty ? group.name : name.trim();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void deleteGroup(String id) {
@@ -1214,7 +1214,7 @@ class AppState extends ChangeNotifier
       pendingFolderId = '';
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     _scheduleDraft();
   }
 
@@ -1261,7 +1261,7 @@ class AppState extends ChangeNotifier
       parent?.expanded = true;
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return folder;
   }
 
@@ -1270,7 +1270,7 @@ class AppState extends ChangeNotifier
     if (folder == null) return;
     folder.name = name.trim().isEmpty ? folder.name : name.trim();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void toggleFolder(String id) {
@@ -1278,7 +1278,7 @@ class AppState extends ChangeNotifier
     if (folder == null) return;
     folder.expanded = !folder.expanded;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void deleteFolder(String id) {
@@ -1317,7 +1317,7 @@ class AppState extends ChangeNotifier
     if (ids.contains(pendingFolderId)) pendingFolderId = target.parentId;
     folders.removeWhere((item) => ids.contains(item.id));
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     _scheduleDraft();
   }
 
@@ -1342,7 +1342,7 @@ class AppState extends ChangeNotifier
     if (group == null) return;
     group.expanded = !group.expanded;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void moveEntryToGroup(String entryId, String groupId) =>
@@ -1372,7 +1372,7 @@ class AppState extends ChangeNotifier
       pendingFolderId = entry.folderId;
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     _scheduleDraft();
   }
 
@@ -1390,7 +1390,7 @@ class AppState extends ChangeNotifier
     final insertAt = collections.indexWhere((item) => item.id == targetId);
     collections.insert(insertAt < 0 ? collections.length : insertAt, entry);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   CollectionEntry? duplicateEntry(String id) {
@@ -1408,7 +1408,7 @@ class AppState extends ChangeNotifier
     );
     collections.insert(0, copy);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return copy;
   }
 
@@ -1452,7 +1452,7 @@ class AppState extends ChangeNotifier
       );
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return copy;
   }
 
@@ -1498,7 +1498,7 @@ class AppState extends ChangeNotifier
       );
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return group;
   }
 
@@ -1521,7 +1521,7 @@ class AppState extends ChangeNotifier
       }
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     _scheduleDraft();
   }
 
@@ -1530,7 +1530,7 @@ class AppState extends ChangeNotifier
     if (entry == null) return;
     entry.examples.insert(0, example);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void deleteExample(String entryId, String exampleId) {
@@ -1538,26 +1538,26 @@ class AppState extends ChangeNotifier
     if (entry == null) return;
     entry.examples.removeWhere((item) => item.id == exampleId);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setGlobals(List<KV> list) {
     globals = list;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   /// 整体替换当前环境的变量（用于 .env / CSV 导入）。
   void setActiveEnvVars(List<KV> vars) {
     env.vars = vars;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void updateSettings(AppSettings next) {
     settings = next;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setCollectionAuth(String groupId, AuthConfig auth) {
@@ -1565,7 +1565,7 @@ class AppState extends ChangeNotifier
     if (group == null) return;
     group.auth = auth;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setGroupStarred(String groupId, bool starred) {
@@ -1573,7 +1573,7 @@ class AppState extends ChangeNotifier
     if (group == null || group.starred == starred) return;
     group.starred = starred;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setCollectionVariables(String groupId, List<KV> vars) {
@@ -1581,7 +1581,7 @@ class AppState extends ChangeNotifier
     if (group == null) return;
     group.variables = vars;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setFolderAuth(String folderId, AuthConfig auth) {
@@ -1589,7 +1589,7 @@ class AppState extends ChangeNotifier
     if (folder == null) return;
     folder.auth = auth;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void setFolderVariables(String folderId, List<KV> vars) {
@@ -1597,7 +1597,7 @@ class AppState extends ChangeNotifier
     if (folder == null) return;
     folder.variables = vars;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   /// 可用的变量名，用于 `{{` 自动补全。
@@ -1640,7 +1640,7 @@ class AppState extends ChangeNotifier
     }
     if (environments.length == 1) activeEnvId = next.id;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   void switchEnv(String id) {
@@ -1648,7 +1648,7 @@ class AppState extends ChangeNotifier
     if (!environments.any((item) => item.id == id)) return;
     activeEnvId = id;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   Env createEnv(String name) {
@@ -1656,7 +1656,7 @@ class AppState extends ChangeNotifier
     environments.add(created);
     activeEnvId = created.id;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return created;
   }
 
@@ -1669,7 +1669,7 @@ class AppState extends ChangeNotifier
     environments.add(copy);
     activeEnvId = copy.id;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   bool deleteEnv(String id) {
@@ -1677,7 +1677,7 @@ class AppState extends ChangeNotifier
     environments.removeWhere((item) => item.id == id);
     if (activeEnvId == id) activeEnvId = environments.first.id;
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     return true;
   }
 
@@ -1685,14 +1685,14 @@ class AppState extends ChangeNotifier
     if (index >= 0 && index < cookies.length) {
       cookies.removeAt(index);
       notifyListeners();
-      _schedulePersist();
+      schedulePersist();
     }
   }
 
   void clearCookies() {
     cookies.clear();
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
   }
 
   /* ------------------------------------------------------------------ */

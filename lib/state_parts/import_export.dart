@@ -17,7 +17,7 @@ mixin _WorkspaceTransfer on ChangeNotifier {
 
   void updateEnv(String name, List<KV> vars);
   void _syncMonitors();
-  void _schedulePersist();
+  void schedulePersist();
 
   Map<String, dynamic> exportAstra() => {
         'app': AppState.appName,
@@ -80,7 +80,7 @@ mixin _WorkspaceTransfer on ChangeNotifier {
     }
     collections.insertAll(0, result.collections);
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     final label = kind == 'postman' ? 'Postman' : 'OpenAPI';
     final created = <String>[
       if (result.groups.isNotEmpty) '${result.groups.length} collection(s)',
@@ -176,7 +176,7 @@ mixin _WorkspaceTransfer on ChangeNotifier {
       _syncMonitors();
     }
     notifyListeners();
-    _schedulePersist();
+    schedulePersist();
     final groupCount = rawGroups is List ? rawGroups.length : 0;
     final envCount = rawEnvs is List ? rawEnvs.length : 0;
     return 'Imported $count requests, $groupCount collections, $envCount environments from Astra backup';

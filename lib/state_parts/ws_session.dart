@@ -17,7 +17,7 @@ mixin _WsSession on ChangeNotifier {
   set history(List<HistoryEntry> value);
   String resolve(String input);
   String _nameFromUrl(String url);
-  void _schedulePersist();
+  void schedulePersist();
 
   Future<void> connectWs() async {
     if (wsState != 'idle') return;
@@ -55,7 +55,7 @@ mixin _WsSession on ChangeNotifier {
         ),
       );
       if (history.length > 80) history = history.sublist(0, 80);
-      _schedulePersist();
+      schedulePersist();
     }
 
     try {
@@ -69,7 +69,7 @@ mixin _WsSession on ChangeNotifier {
           _wsSystem('Connection established');
           pushWsHistory(101);
           notifyListeners();
-          _schedulePersist();
+          schedulePersist();
         },
         onMessage: (data) {
           wsReceived += 1;

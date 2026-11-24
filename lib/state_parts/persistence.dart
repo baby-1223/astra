@@ -183,7 +183,7 @@ mixin _WorkspacePersistence on ChangeNotifier {
     _syncMonitors();
   }
 
-  void _schedulePersist() {
+  void schedulePersist() {
     _persistTimer?.cancel();
     _persistTimer = Timer(const Duration(milliseconds: 400), _persistWorkspace);
   }
