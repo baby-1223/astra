@@ -26,6 +26,23 @@ void main() {
     });
   });
 
+  group('集合星标', () {
+    test('切换星标并随 JSON 持久化', () {
+      final state = AppState();
+      final group = state.createGroup('常用集合', 'http');
+      expect(group.starred, isFalse);
+
+      state.setGroupStarred(group.id, true);
+
+      expect(state.groups.single.starred, isTrue);
+      final restored = CollectionGroup.fromJson(state.groups.single.toJson());
+      expect(restored.starred, isTrue);
+
+      state.setGroupStarred(group.id, false);
+      expect(state.groups.single.starred, isFalse);
+    });
+  });
+
   group('多环境', () {
     test('创建、切换与删除环境', () {
       final state = AppState();

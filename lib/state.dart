@@ -1852,6 +1852,14 @@ class AppState extends ChangeNotifier {
     _schedulePersist();
   }
 
+  void setGroupStarred(String groupId, bool starred) {
+    final group = groups.where((item) => item.id == groupId).firstOrNull;
+    if (group == null || group.starred == starred) return;
+    group.starred = starred;
+    notifyListeners();
+    _schedulePersist();
+  }
+
   void setCollectionVariables(String groupId, List<KV> vars) {
     final group = groups.where((item) => item.id == groupId).firstOrNull;
     if (group == null) return;

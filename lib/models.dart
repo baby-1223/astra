@@ -650,6 +650,7 @@ class CollectionGroup {
   String mode; // http | ws
   String description;
   bool expanded;
+  bool starred;
   List<KV> variables;
   AuthConfig auth;
 
@@ -659,6 +660,7 @@ class CollectionGroup {
     this.mode = 'http',
     this.description = '',
     this.expanded = true,
+    this.starred = false,
     List<KV>? variables,
     AuthConfig? auth,
   })  : id = id ?? newId(),
@@ -671,6 +673,7 @@ class CollectionGroup {
         'mode': mode,
         'description': description,
         'expanded': expanded,
+        'starred': starred,
         'variables': variables.map((e) => e.toJson()).toList(),
         'auth': auth.toJson(),
       };
@@ -681,6 +684,7 @@ class CollectionGroup {
         mode: '${json['mode'] ?? 'http'}',
         description: '${json['description'] ?? ''}',
         expanded: json['expanded'] != false,
+        starred: json['starred'] == true,
         variables: json['variables'] is List
             ? (json['variables'] as List)
                 .whereType<Map>()

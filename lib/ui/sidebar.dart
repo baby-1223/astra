@@ -23,6 +23,7 @@ class _SidebarState extends State<Sidebar> {
   bool _historySelectMode = false;
   final Set<String> _selectedHistory = {};
   final TextEditingController _search = TextEditingController();
+  bool _starredOnly = false;
 
   @override
   void dispose() {
@@ -82,18 +83,30 @@ class _SidebarState extends State<Sidebar> {
                         padding: EdgeInsets.fromLTRB(14, 2, 14, 6),
                         child: SizedBox(
                           height: 32,
-                          child: BoundTextField(
-                            value: _search.text,
-                            hint: state.mode == 'ws'
-                                ? 'Search connections'
-                                : 'Search requests, folders or collections',
-                            fontSize: 11.5,
-                            contentPadding:
-                                EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            onChanged: (value) {
-                              _search.text = value;
-                              setState(() {});
-                            },
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: BoundTextField(
+                                  value: _search.text,
+                                  hint: state.mode == 'ws'
+                                      ? 'Search connections'
+                                      : 'Search requests, folders or collections',
+                                  fontSize: 11.5,
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 7),
+                                  onChanged: (value) {
+                                    _search.text = value;
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              _StarFilterButton(
+                                active: _starredOnly,
+                                onTap: () =>
+                                    setState(() => _starredOnly = !_starredOnly),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -250,14 +263,30 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
+  /// Starred collections come first while keeping the user's order inside each bucket.
+  List<CollectionGroup> _orderedGroups(
+    AppState state,
+    String mode, {
+    bool applyFilter = true,
+  }) {
+    var groups = state.groupsFor(mode);
+    if (applyFilter && _starredOnly) {
+      groups = groups.where((group) => group.starred).toList();
+    }
+    return [
+      ...groups.where((group) => group.starred),
+      ...groups.where((group) => !group.starred),
+    ];
+  }
+
   Widget _collectionList(AppState state) {
     final mode = state.mode;
     final isWs = mode == 'ws';
     final query = _search.text.trim().toLowerCase();
     if (query.isNotEmpty) return _searchResults(state, query);
-    final groups = state.groupsFor(mode);
+    final groups = _orderedGroups(state, mode);
     final entries = state.entriesFor(mode);
-    final knownGroupIds = groups.map((group) => group.id).toSet();
+    final knownGroupIds = state.groupsFor(mode).map((group) => group.id).toSet();
     final ungrouped =
         entries.where((entry) => !knownGroupIds.contains(entry.groupId)).toList();
 
@@ -269,11 +298,21 @@ class _SidebarState extends State<Sidebar> {
           Padding(
             padding: EdgeInsets.only(top: 40),
             child: EmptyHint(
-              icon: isWs ? Icons.electrical_services_rounded : Icons.inbox_outlined,
-              title: isWs ? 'No saved connections yet' : 'No saved requests yet',
-              subtitle: isWs
-                  ? 'Configure the connection URL and headers, then press ⌘ / Ctrl + S\nto save frequently used WebSocket connections into a collection'
-                  : 'Click "New Collection" to create a group,\nthen save requests into it',
+              icon: _starredOnly
+                  ? Icons.star_outline_rounded
+                  : isWs
+                      ? Icons.electrical_services_rounded
+                      : Icons.inbox_outlined,
+              title: _starredOnly
+                  ? 'No starred collections'
+                  : isWs
+                      ? 'No saved connections yet'
+                      : 'No saved requests yet',
+              subtitle: _starredOnly
+                  ? 'Click the star on a collection to pin it to the top'
+                  : isWs
+                      ? 'Configure the connection URL and headers, then press ⌘ / Ctrl + S\nto save frequently used WebSocket connections into a collection'
+                      : 'Click "New Collection" to create a group,\nthen save requests into it',
             ),
           ),
         for (final group in groups) ...[
@@ -314,7 +353,7 @@ class _SidebarState extends State<Sidebar> {
       final group = state.groups.where((item) => item.id == folder.groupId).firstOrNull;
       return group?.mode == state.mode && folder.name.toLowerCase().contains(query);
     }).toList();
-    final groups = state.groupsFor(state.mode)
+    final groups = _orderedGroups(state, state.mode, applyFilter: false)
         .where((group) => group.name.toLowerCase().contains(query))
         .toList();
 
@@ -453,6 +492,14 @@ class _SidebarState extends State<Sidebar> {
       ),
       PopupMenuDivider(),
       PopupMenuItem<String>(
+        value: 'star',
+        height: 36,
+        child: Text(
+          group.starred ? 'Unstar Collection' : 'Star Collection',
+          style: TextStyle(fontSize: 12),
+        ),
+      ),
+      PopupMenuItem<String>(
         value: 'variables',
         height: 36,
         child: Text('Variables', style: TextStyle(fontSize: 12)),
@@ -530,6 +577,9 @@ class _SidebarState extends State<Sidebar> {
           current: group.auth,
           onSave: (auth) => state.setCollectionAuth(group.id, auth),
         );
+        break;
+      case 'star':
+        state.setGroupStarred(group.id, !group.starred);
         break;
       case 'monitor':
         await showMonitorsDialog(context, state, group);
@@ -734,6 +784,11 @@ class _SidebarState extends State<Sidebar> {
               Text(
                 '$total',
                 style: TextStyle(fontSize: 10, color: AstraColors.faint),
+              ),
+              SizedBox(width: 2),
+              _GroupStarButton(
+                starred: group.starred,
+                onTap: () => state.setGroupStarred(group.id, !group.starred),
               ),
               SizedBox(width: 2),
               Icon(Icons.more_horiz, size: 15, color: AstraColors.faint),
@@ -1289,6 +1344,93 @@ class _HistoryItemState extends State<_HistoryItem> {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Star shown on collection rows: always visible once starred, otherwise on hover.
+class _GroupStarButton extends StatefulWidget {
+  final bool starred;
+  final VoidCallback onTap;
+
+  const _GroupStarButton({required this.starred, required this.onTap});
+
+  @override
+  State<_GroupStarButton> createState() => _GroupStarButtonState();
+}
+
+class _GroupStarButtonState extends State<_GroupStarButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = widget.starred || _hover;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Tooltip(
+          message: widget.starred ? 'Unstar collection' : 'Star collection',
+          waitDuration: const Duration(milliseconds: 500),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: visible
+                ? Icon(
+                    widget.starred
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 15,
+                    color: widget.starred
+                        ? const Color(0xFFF2A93B)
+                        : AstraColors.faint,
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Toolbar toggle that filters the collection list down to starred items.
+class _StarFilterButton extends StatelessWidget {
+  final bool active;
+  final VoidCallback onTap;
+
+  const _StarFilterButton({required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: active ? 'Show all collections' : 'Only starred collections',
+      waitDuration: const Duration(milliseconds: 500),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: active
+                ? AstraColors.accent.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: active
+                  ? AstraColors.accent.withValues(alpha: 0.45)
+                  : AstraColors.line,
+            ),
+          ),
+          child: Icon(
+            active ? Icons.star_rounded : Icons.star_outline_rounded,
+            size: 16,
+            color: active ? AstraColors.accent : AstraColors.faint,
           ),
         ),
       ),
