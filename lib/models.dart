@@ -606,6 +606,8 @@ class CollectionFolder {
   bool expanded;
   List<KV> variables;
   AuthConfig auth;
+  String preScript;
+  String postScript;
 
   CollectionFolder({
     String? id,
@@ -616,6 +618,8 @@ class CollectionFolder {
     this.expanded = true,
     List<KV>? variables,
     AuthConfig? auth,
+    this.preScript = '',
+    this.postScript = '',
   })  : id = id ?? newId(),
         variables = variables ?? [],
         auth = auth ?? AuthConfig(type: 'inherit');
@@ -629,6 +633,8 @@ class CollectionFolder {
         'expanded': expanded,
         'variables': variables.map((e) => e.toJson()).toList(),
         'auth': auth.toJson(),
+        'preScript': preScript,
+        'postScript': postScript,
       };
 
   factory CollectionFolder.fromJson(Map<String, dynamic> json) => CollectionFolder(
@@ -647,6 +653,8 @@ class CollectionFolder {
         auth: json['auth'] is Map
             ? AuthConfig.fromJson(Map<String, dynamic>.from(json['auth'] as Map))
             : AuthConfig(type: 'inherit'),
+        preScript: '${json['preScript'] ?? ''}',
+        postScript: '${json['postScript'] ?? ''}',
       );
 }
 
@@ -660,6 +668,8 @@ class CollectionGroup {
   bool starred;
   List<KV> variables;
   AuthConfig auth;
+  String preScript;
+  String postScript;
 
   CollectionGroup({
     String? id,
@@ -670,6 +680,8 @@ class CollectionGroup {
     this.starred = false,
     List<KV>? variables,
     AuthConfig? auth,
+    this.preScript = '',
+    this.postScript = '',
   })  : id = id ?? newId(),
         variables = variables ?? [],
         auth = auth ?? AuthConfig();
@@ -683,6 +695,8 @@ class CollectionGroup {
         'starred': starred,
         'variables': variables.map((e) => e.toJson()).toList(),
         'auth': auth.toJson(),
+        'preScript': preScript,
+        'postScript': postScript,
       };
 
   factory CollectionGroup.fromJson(Map<String, dynamic> json) => CollectionGroup(
@@ -701,6 +715,8 @@ class CollectionGroup {
         auth: json['auth'] is Map
             ? AuthConfig.fromJson(Map<String, dynamic>.from(json['auth'] as Map))
             : AuthConfig(),
+        preScript: '${json['preScript'] ?? ''}',
+        postScript: '${json['postScript'] ?? ''}',
       );
 }
 

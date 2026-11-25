@@ -32,7 +32,7 @@ class AppState extends ChangeNotifier
         _WsSession,
         _TrafficTools {
   static const String appName = 'Astra';
-  static const String version = '2.2.0';
+  static const String version = '2.2.1';
 
   /// workspace.json / draft.json 的结构版本，加载时用于迁移。
   static const int workspaceSchemaVersion = 1;
@@ -481,7 +481,7 @@ class AppState extends ChangeNotifier
     String url = '';
     try {
       await _refreshOAuthIfNeeded(work);
-      _runScript(work.preScript, work, event: 'prerequest');
+      _runScript(_combinedScript(work.preScript, prerequest: true), work, event: 'prerequest');
       final effective = work;
 
       url = buildUrl(effective);
@@ -530,7 +530,7 @@ class AppState extends ChangeNotifier
       responseError = null;
       responseHistory.insert(0, result);
       if (responseHistory.length > 6) responseHistory.removeLast();
-      _runScript(work.postScript, work, event: 'test', response: result);
+      _runScript(_combinedScript(work.postScript, prerequest: false), work, event: 'test', response: result);
       _pushHistory(snapshot, url, result.status, result.ms);
     } catch (err) {
       response = null;
@@ -580,7 +580,7 @@ class AppState extends ChangeNotifier
     String url = '';
     try {
       await _refreshOAuthIfNeeded(work);
-      _runScript(work.preScript, work, event: 'prerequest');
+      _runScript(_combinedScript(work.preScript, prerequest: true), work, event: 'prerequest');
       url = buildUrl(work);
       final headers = collectHeaders(work);
       final session = await http.openEventStream(
@@ -703,6 +703,30 @@ class AppState extends ChangeNotifier
         : outcome.headers
             .map((header) => KV(on: !header.disabled, k: header.key, v: header.value))
             .toList();
+  }
+
+  /// 集合 → 外层文件夹 → 内层文件夹 → 当前请求的脚本合并结果，
+  /// 与 Postman 的继承顺序一致。
+  String _combinedScript(String own, {required bool prerequest}) {
+    final parts = <String>[];
+    final group = groups.where((item) => item.id == _activeGroupId).firstOrNull;
+    if (group != null) parts.add(prerequest ? group.preScript : group.postScript);
+    final chain = <CollectionFolder>[];
+    var folder = folders.where((item) => item.id == _activeFolderId).firstOrNull;
+    var guard = 0;
+    while (folder != null && guard < 32) {
+      chain.insert(0, folder);
+      final parentId = folder.parentId;
+      folder = parentId.isEmpty
+          ? null
+          : folders.where((item) => item.id == parentId).firstOrNull;
+      guard += 1;
+    }
+    for (final item in chain) {
+      parts.add(prerequest ? item.preScript : item.postScript);
+    }
+    parts.add(own);
+    return parts.where((item) => item.trim().isNotEmpty).join('\n');
   }
 
   Map<String, String> _scriptHeaders(ApiRequest req) {
@@ -1617,6 +1641,24 @@ class AppState extends ChangeNotifier
     final folder = folders.where((item) => item.id == folderId).firstOrNull;
     if (folder == null) return;
     folder.variables = vars;
+    notifyListeners();
+    schedulePersist();
+  }
+
+  void setCollectionScripts(String groupId, String pre, String post) {
+    final group = groups.where((item) => item.id == groupId).firstOrNull;
+    if (group == null) return;
+    group.preScript = pre;
+    group.postScript = post;
+    notifyListeners();
+    schedulePersist();
+  }
+
+  void setFolderScripts(String folderId, String pre, String post) {
+    final folder = folders.where((item) => item.id == folderId).firstOrNull;
+    if (folder == null) return;
+    folder.preScript = pre;
+    folder.postScript = post;
     notifyListeners();
     schedulePersist();
   }

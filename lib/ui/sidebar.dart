@@ -515,6 +515,11 @@ class _SidebarState extends State<Sidebar> {
         child: Text('Authorization', style: TextStyle(fontSize: 12)),
       ),
       PopupMenuItem<String>(
+        value: 'scripts',
+        height: 36,
+        child: Text('Scripts', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
         value: 'monitor',
         height: 36,
         child: Text('Monitors', style: TextStyle(fontSize: 12)),
@@ -583,6 +588,15 @@ class _SidebarState extends State<Sidebar> {
           onSave: (auth) => state.setCollectionAuth(group.id, auth),
         );
         break;
+      case 'scripts':
+        await showScopeScriptsDialog(
+          context,
+          title: 'Collection Scripts · ${group.name}',
+          preScript: group.preScript,
+          postScript: group.postScript,
+          onSave: (pre, post) => state.setCollectionScripts(group.id, pre, post),
+        );
+        break;
       case 'star':
         state.setGroupStarred(group.id, !group.starred);
         break;
@@ -636,6 +650,11 @@ class _SidebarState extends State<Sidebar> {
         value: 'auth',
         height: 36,
         child: Text('Authorization', style: TextStyle(fontSize: 12)),
+      ),
+      PopupMenuItem<String>(
+        value: 'scripts',
+        height: 36,
+        child: Text('Scripts', style: TextStyle(fontSize: 12)),
       ),
       PopupMenuItem<String>(
         value: 'duplicate',
@@ -705,6 +724,15 @@ class _SidebarState extends State<Sidebar> {
           title: 'Folder Authorization · ${folder.name}',
           current: folder.auth,
           onSave: (auth) => state.setFolderAuth(folder.id, auth),
+        );
+        break;
+      case 'scripts':
+        await showScopeScriptsDialog(
+          context,
+          title: 'Folder Scripts · ${folder.name}',
+          preScript: folder.preScript,
+          postScript: folder.postScript,
+          onSave: (pre, post) => state.setFolderScripts(folder.id, pre, post),
         );
         break;
       case 'duplicate':

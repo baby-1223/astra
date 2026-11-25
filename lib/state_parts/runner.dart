@@ -50,6 +50,7 @@ mixin _RunnerTools on ChangeNotifier {
   List<FormRow> buildMultipart([ApiRequest? req]);
   Uint8List buildGrpcFrame(ApiRequest source);
   Map<String, String> _scriptHeaders(ApiRequest req);
+  String _combinedScript(String own, {required bool prerequest});
   Map<String, String> _mapOf(List<KV> list);
   Map<String, String> _collectionVars(String groupId);
   String _normalizeBodyMode(String mode, String body);
@@ -217,7 +218,7 @@ mixin _RunnerTools on ChangeNotifier {
     try {
       await _refreshOAuthIfNeeded(work);
       final pre = scripts.run(
-        source: work.preScript,
+        source: _combinedScript(work.preScript, prerequest: true),
         input: ScriptInput(
           method: work.method,
           url: work.url,
@@ -264,7 +265,7 @@ mixin _RunnerTools on ChangeNotifier {
       body = result.text ?? '';
 
       final post = scripts.run(
-        source: work.postScript,
+        source: _combinedScript(work.postScript, prerequest: false),
         input: ScriptInput(
           method: work.method,
           url: url,

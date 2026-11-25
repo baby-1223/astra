@@ -527,6 +527,109 @@ function __astraExpect(actual, negate) {
   return api;
 }
 
+function __astraResponseJson() {
+  try {
+    return __astraResponse ? JSON.parse(__astraResponse.text()) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function __astraJsonSegments(expr) {
+  var text = String(expr == null ? '' : expr).trim();
+  if (text.charAt(0) === '$') text = text.substring(1);
+  var segments = [];
+  var i = 0;
+  while (i < text.length) {
+    if (text.substr(i, 2) === '..') {
+      i += 2;
+      var start = i;
+      while (i < text.length && text.charAt(i) !== '.' && text.charAt(i) !== '[') i++;
+      var recursiveName = text.substring(start, i).trim();
+      if (recursiveName) segments.push({ recursive: recursiveName });
+    } else if (text.charAt(i) === '.') {
+      i++;
+      if (text.charAt(i) === '*') {
+        segments.push({ wildcard: true });
+        i++;
+      } else {
+        var start = i;
+        while (i < text.length && text.charAt(i) !== '.' && text.charAt(i) !== '[') i++;
+        var name = text.substring(start, i).trim();
+        if (name) segments.push({ key: name });
+      }
+    } else if (text.charAt(i) === '[') {
+      var end = text.indexOf(']', i);
+      if (end < 0) break;
+      var raw = text.substring(i + 1, end).trim();
+      if (raw === '*') segments.push({ wildcard: true });
+      else if (/^-?\d+$/.test(raw)) segments.push({ index: parseInt(raw, 10) });
+      else segments.push({ key: raw.replace(/^['"]/, '').replace(/['"]$/, '') });
+      i = end + 1;
+    } else {
+      break;
+    }
+  }
+  return segments;
+}
+
+function __astraWalkNamed(node, name, out) {
+  if (node === null || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (var i = 0; i < node.length; i++) __astraWalkNamed(node[i], name, out);
+    return;
+  }
+  for (var key in node) {
+    if (!Object.prototype.hasOwnProperty.call(node, key)) continue;
+    if (key === name) out.push(node[key]);
+    __astraWalkNamed(node[key], name, out);
+  }
+}
+
+function __astraJsonPathAll(root, expr) {
+  var segments = __astraJsonSegments(expr);
+  var current = [root];
+  for (var s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    var next = [];
+    for (var i = 0; i < current.length; i++) {
+      var node = current[i];
+      if (node === undefined || node === null) continue;
+      if (seg.key !== undefined) {
+        if (typeof node === 'object' && !Array.isArray(node) &&
+            Object.prototype.hasOwnProperty.call(node, seg.key)) {
+          next.push(node[seg.key]);
+        }
+      } else if (seg.index !== undefined) {
+        if (Array.isArray(node)) {
+          var index = seg.index < 0 ? node.length + seg.index : seg.index;
+          if (index >= 0 && index < node.length) next.push(node[index]);
+        }
+      } else if (seg.wildcard) {
+        if (Array.isArray(node)) {
+          for (var a = 0; a < node.length; a++) next.push(node[a]);
+        } else if (typeof node === 'object') {
+          for (var k in node) {
+            if (Object.prototype.hasOwnProperty.call(node, k)) next.push(node[k]);
+          }
+        }
+      } else if (seg.recursive !== undefined) {
+        __astraWalkNamed(node, seg.recursive, next);
+      }
+    }
+    current = next;
+    if (!current.length) break;
+  }
+  return current.filter(function (item) { return item !== undefined && item !== null; });
+}
+
+/// 取单值：只有一个匹配时返回该值，多个返回数组，无匹配返回 undefined。
+function __astraJsonPath(root, expr) {
+  var all = __astraJsonPathAll(root, expr);
+  if (!all.length) return undefined;
+  return all.length === 1 ? all[0] : all;
+}
+
 function __astraBuildResponse(data) {
   var headerMap = data.headerMap || {};
   var headerList = data.headerList || [];
@@ -563,9 +666,14 @@ function __astraBuildResponse(data) {
         var body = __astraResponse.json();
         var actual = path;
         if (typeof path === 'string') {
-          actual = path.split('.').reduce(function (node, key) {
-            return node == null ? node : node[key];
-          }, body);
+          if (path.charAt(0) === '$') {
+            var matches = __astraJsonPathAll(body, path);
+            actual = matches.length === 0 ? undefined : (matches.length === 1 ? matches[0] : matches);
+          } else {
+            actual = path.split('.').reduce(function (node, key) {
+              return node == null ? node : node[key];
+            }, body);
+          }
         }
         if (arguments.length < 2) {
           if (actual === undefined) throw new Error('Expected response JSON to contain ' + path);
@@ -626,6 +734,10 @@ var pm = {
     }
   },
   expect: function (actual) { return __astraExpect(actual, false); },
+  jsonPath: function (expr, node) {
+    if (arguments.length > 1) return __astraJsonPath(node, expr);
+    return __astraJsonPath(__astraResponseJson(), expr);
+  },
   sendRequest: function () {
     __astraPush('warn', ['pm.sendRequest is not supported in this desktop version']);
   }

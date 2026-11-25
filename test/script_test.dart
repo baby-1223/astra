@@ -246,4 +246,82 @@ void main() {
       await server.close(force: true);
     });
   });
+
+  group('JSONPath', () {
+    test('支持通配符、递归与负索引', () {
+      const text = '{"data":{"items":[{"id":1},{"id":2}],"token":"t-1"},"meta":{"token":"t-2"}}';
+      final response = HttpResult(
+        status: 200,
+        reason: 'OK',
+        headers: {
+          'content-type': ['application/json'],
+        },
+        bytes: Uint8List.fromList(utf8.encode(text)),
+        text: text,
+        ms: 5,
+        size: text.length,
+      );
+
+      final outcome = service.run(
+        source: '''
+          const ids = pm.jsonPath('\$.data.items[*].id');
+          pm.environment.set('ids', ids.join(','));
+          pm.environment.set('last', String(pm.jsonPath('\$.data.items[-1].id')));
+          pm.environment.set('recursive', pm.jsonPath('\$..token').join('|'));
+          pm.test('wildcard returns array', () => pm.expect(Array.isArray(ids)).to.equal(true));
+          pm.test('recursive finds both tokens', () => pm.expect(pm.jsonPath('\$..token').length).to.equal(2));
+        ''',
+        input: buildInput(event: 'test'),
+        response: response,
+      )!;
+
+      expect(outcome.error, isNull);
+      expect(outcome.env['ids'], '1,2');
+      expect(outcome.env['last'], '2');
+      expect(outcome.env['recursive'], 't-1|t-2');
+      expect(outcome.tests.length, 2);
+      expect(outcome.tests.every((test) => test.passed), isTrue);
+    });
+  });
+
+  group('集合与文件夹脚本', () {
+    test('运行器按 集合 → 文件夹 → 请求 顺序合并执行', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        await request.drain<void>();
+        request.response.write('ok');
+        await request.response.close();
+      });
+
+      final state = AppState();
+      state.env.vars = [KV(k: 'order', v: '')];
+      final group = state.createGroup('Scripts', 'http');
+      group.preScript =
+          "pm.environment.set('order', (pm.environment.get('order') || '') + 'C');";
+      final folder = state.createFolder(group.id, '', 'Inner');
+      folder.preScript =
+          "pm.environment.set('order', (pm.environment.get('order') || '') + 'F');";
+      final entry = CollectionEntry(
+        name: 'ping',
+        groupId: group.id,
+        folderId: folder.id,
+        mode: 'http',
+        request: ApiRequest(
+          method: 'GET',
+          url: 'http://127.0.0.1:${server.port}/',
+          preScript:
+              "pm.environment.set('order', (pm.environment.get('order') || '') + 'R');",
+        ),
+      );
+      state.collections.add(entry);
+
+      final report = await state.runCollection(groupId: group.id);
+
+      expect(report.failed, 0);
+      final order = state.env.vars.firstWhere((item) => item.k == 'order').v;
+      expect(order, 'CFR');
+
+      await server.close(force: true);
+    });
+  });
 }

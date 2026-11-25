@@ -1689,6 +1689,84 @@ Future<void> showMonitorsDialog(
 }
 
 /// 导入时按变量名合并：已存在的变量更新值，新变量追加到末尾。
+/* ------------------------------------------------------------------ */
+/* 集合 / 文件夹 脚本                                                  */
+/* ------------------------------------------------------------------ */
+
+Future<void> showScopeScriptsDialog(
+  BuildContext context, {
+  required String title,
+  required String preScript,
+  required String postScript,
+  required void Function(String pre, String post) onSave,
+}) async {
+  final pre = TextEditingController(text: preScript);
+  final post = TextEditingController(text: postScript);
+
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => AstraDialogShell(
+      title: title,
+      subtitle: 'Scripts run for every request in this scope: collection first, then folders '
+          'outer to inner, then the request. Both phases use the same JavaScript API as request scripts.',
+      width: 720,
+      child: SizedBox(
+        height: 520,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SectionLabel('Pre-request script'),
+            SizedBox(height: 6),
+            Expanded(
+              child: TextField(
+                controller: pre,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                style: monoStyle(size: 12, height: 1.5),
+                decoration: astraInput(
+                  hint: "pm.environment.set('token', '...');",
+                  contentPadding: EdgeInsets.all(10),
+                ),
+              ),
+            ),
+            SizedBox(height: 12),
+            SectionLabel('Post-response script'),
+            SizedBox(height: 6),
+            Expanded(
+              child: TextField(
+                controller: post,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                style: monoStyle(size: 12, height: 1.5),
+                decoration: astraInput(
+                  hint: "pm.test('ok', () => pm.expect(pm.response.code).to.equal(200));",
+                  contentPadding: EdgeInsets.all(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        GhostButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop()),
+        GradientButton(
+          label: 'Save',
+          onPressed: () {
+            onSave(pre.text, post.text);
+            Navigator.of(ctx).pop();
+          },
+        ),
+      ],
+    ),
+  );
+  pre.dispose();
+  post.dispose();
+}
+
 void _mergeVariableRows(List<KV> target, List<KV> incoming) {
   for (final row in incoming) {
     final key = row.k.trim();
