@@ -4,8 +4,8 @@
 
 **本地优先的 API 调试客户端 · A local-first API client for macOS & Windows**
 
-[![Build Windows](https://github.com/baby-1223/astra/actions/workflows/build-windows.yml/badge.svg)](https://github.com/baby-1223/astra/actions/workflows/build-windows.yml)
-[![Build macOS](https://github.com/baby-1223/astra/actions/workflows/build-macos.yml/badge.svg)](https://github.com/baby-1223/astra/actions/workflows/build-macos.yml)
+[![Build Windows](https://github.com/compiler-says-no/astra/actions/workflows/build-windows.yml/badge.svg)](https://github.com/compiler-says-no/astra/actions/workflows/build-windows.yml)
+[![Build macOS](https://github.com/compiler-says-no/astra/actions/workflows/build-macos.yml/badge.svg)](https://github.com/compiler-says-no/astra/actions/workflows/build-macos.yml)
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
 ![Platform](https://img.shields.io/badge/macOS%20%7C%20Windows-Desktop-38BDF8)
 
@@ -150,7 +150,7 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 
 ## 下载安装
 
-前往 [Releases](https://github.com/baby-1223/astra/releases) 下载对应平台压缩包：
+前往 [Releases](https://github.com/compiler-says-no/astra/releases) 下载对应平台压缩包：
 
 | 平台 | 文件 | 说明 |
 |---|---|---|

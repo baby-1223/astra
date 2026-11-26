@@ -18,11 +18,11 @@ class UpdateInfo {
 
 /// Checks GitHub Releases for a newer desktop build.
 class UpdateService {
-  static const String repoUrl = 'https://github.com/baby-1223/astra';
+  static const String repoUrl = 'https://github.com/compiler-says-no/astra';
   static const String documentationUrl = '$repoUrl#readme';
   static const String supportUrl = '$repoUrl/issues';
   static const String releasesApi =
-      'https://api.github.com/repos/baby-1223/astra/releases/latest';
+      'https://api.github.com/repos/compiler-says-no/astra/releases/latest';
 
   Future<UpdateInfo?> checkForUpdates({
     Duration timeout = const Duration(seconds: 10),
