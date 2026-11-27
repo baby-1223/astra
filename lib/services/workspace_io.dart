@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../state.dart';
@@ -9,7 +11,9 @@ Future<void> importWorkspaceData(BuildContext context, AppState state) async {
   try {
     final picked = await pickImportFile();
     if (picked == null) return;
-    final message = state.importData(picked.data);
+    final message = picked.text != null
+        ? state.importText(picked.text!, fileName: picked.fileName)
+        : state.importData(picked.data!);
     state.showToast(message);
   } on FormatException catch (err) {
     if (!context.mounted) return;
@@ -49,6 +53,16 @@ Future<void> exportWorkspaceData(BuildContext context, AppState state) async {
       case 'openapi':
         data = state.exportOpenApi();
         name = 'astra-openapi-$suffix.json';
+      case 'insomnia':
+        final text = const JsonEncoder.withIndent('  ')
+            .convert(state.exportInsomnia());
+        final path = await saveTextFile(
+          'astra-insomnia-$suffix.json',
+          text,
+          'application/json',
+        );
+        if (path != null) state.showToast('Exported: $path');
+        return;
       default:
         data = state.exportAstra();
         name = 'astra-$suffix.json';

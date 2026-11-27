@@ -51,6 +51,11 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 - 请求备注、复制、跨集合迁移、响应示例（Examples）
 - 侧栏搜索过滤，集合与文件夹级备注、变量、认证、前置 / 后置脚本（按 集合 → 外层文件夹 → 内层文件夹 → 请求 顺序继承）
 
+### 导入与导出
+- 导入 Postman 集合 / 环境 / 整包备份、Insomnia v4、OpenAPI 3.0（JSON / YAML）、`.http` / `.rest` 文件与 cURL 命令
+- 导出 Astra 备份、Postman 集合与环境、Insomnia v4
+- 请求一键复制为 cURL / Python / JavaScript / Go / Java / HTTP Client 代码片段
+
 ### 变量与脚本
 - 全局 / 集合 / 文件夹 / 环境 / 请求级变量分层覆盖，优先级：全局 < 集合 < 文件夹 < 环境 < 请求 < 运行时
 - 输入 `{{` 自动补全变量名，变量面板一键查看来源与覆盖关系
@@ -61,7 +66,7 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 
 ### 批量与自动化
 - **Collection Runner**：按集合层级顺序执行，支持重复 N 次、CSV / JSON 数据驱动
-- **运行报告**：通过率、失败项、耗时统计，可导出 JSON
+- **运行报告**：通过率、失败项、耗时统计，可导出 JSON / CSV / JUnit XML（JUnit 可直接接入 CI）
 - **定时监控**：按间隔自动运行集合并记录结果
 - 请求依赖编排：脚本里 `setNextRequest` / `skipRequest` 控制执行流
 
@@ -113,6 +118,14 @@ Postman 的轻量替代品：原生桌面体验，数据只存在你自己的电
 - 星标不影响请求执行、Collection Runner、变量解析与导入导出结果
 
 ---
+
+## 本次更新（v2.3.0）
+
+- 新增 **Insomnia v4 导入 / 导出**：workspace / request_group / request / environment 与 Astra 集合、多级文件夹、环境一一对应，`{{ _.var }}` 与 `{{var}}` 自动互转
+- 新增 **`.http` / `.rest` 文件导入**：支持 `###` 分隔、`@var` 变量、`# @name` 命名、Header / Body 与请求处理器，导入后生成完整集合
+- 新增 **Runner 报告 CSV / JUnit XML 导出**：`Export Report` 可选 JSON / CSV / JUnit XML，JUnit 结果可直接接入 CI
+- 导入入口现同时识别 Postman / Insomnia / OpenAPI / `.http` / Astra 备份
+- `pm.jsonpath()` 作为 `pm.jsonPath()` 的别名保留，与 IDEA 插件脚本 API 完全一致
 
 ## 本次更新（v2.2.1）
 
@@ -232,10 +245,9 @@ macOS 签名公证需要配置 `MACOS_CERT_P12`、`MACOS_CERT_PASSWORD`、`KEYCH
 ## 路线图
 
 - [ ] 团队协作与云同步
-- [ ] OpenAPI / Postman 集合导入
 - [ ] 测试断言模板与测试套件视图
 - [ ] Linux 构建
 
 ---
 
-<div align="center"><sub>Astra v2.2.0 · 用 Flutter 重写的桌面 API 调试工具</sub></div>
+<div align="center"><sub>Astra v2.3.0 · 用 Flutter 重写的桌面 API 调试工具</sub></div>

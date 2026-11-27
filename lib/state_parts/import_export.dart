@@ -43,17 +43,45 @@ mixin _WorkspaceTransfer on ChangeNotifier {
 
   Map<String, dynamic> exportOpenApi() => toOpenApi(collections, env);
 
+  Map<String, dynamic> exportInsomnia() => toInsomnia(
+        groups: groups,
+        folders: folders,
+        collections: collections,
+        environments: environments,
+      );
+
   /// 返回导入结果描述；无法识别时抛出异常。
   String importData(dynamic data) {
     final kind = detectKind(data);
     if (kind == 'unknown' || data is! Map) {
-      throw const FormatException('Unrecognized file format. Supported formats: Postman, OpenAPI 3, Swagger 2 and Astra export');
+      throw const FormatException(
+          'Unrecognized file format. Supported formats: Postman, OpenAPI 3, Swagger 2, Insomnia and Astra export');
     }
     if (kind == 'astra') {
       return _importAstra(Map<String, dynamic>.from(data));
     }
     final doc = Map<String, dynamic>.from(data);
-    final result = kind == 'postman' ? importPostman(doc) : importOpenApi(doc);
+    final ImportResult result;
+    final String label;
+    switch (kind) {
+      case 'insomnia':
+        result = importInsomnia(doc);
+        label = 'Insomnia';
+      case 'postman':
+        result = importPostman(doc);
+        label = 'Postman';
+      default:
+        result = importOpenApi(doc);
+        label = 'OpenAPI';
+    }
+    return _mergeImport(result, label);
+  }
+
+  /// Imports an IntelliJ HTTP Client file (`.http` / `.rest`).
+  String importText(String text, {String fileName = 'Imported.http'}) =>
+      _mergeImport(importHttpFile(text, fileName), 'HTTP file');
+
+  String _mergeImport(ImportResult result, String label) {
     var merged = 0;
     for (final variable in result.variables) {
       final key = variable.k.trim();
@@ -84,7 +112,6 @@ mixin _WorkspaceTransfer on ChangeNotifier {
     collections.insertAll(0, result.collections);
     notifyListeners();
     schedulePersist();
-    final label = kind == 'postman' ? 'Postman' : 'OpenAPI';
     final created = <String>[
       if (result.groups.isNotEmpty) '${result.groups.length} collection(s)',
       if (result.folders.isNotEmpty) '${result.folders.length} folder(s)',

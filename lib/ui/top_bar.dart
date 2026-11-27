@@ -79,7 +79,7 @@ class TopBar extends StatelessWidget {
           ),
           _IconAction(
             icon: Icons.file_download_outlined,
-            tooltip: 'Import Postman / OpenAPI / Astra',
+            tooltip: 'Import Postman / Insomnia / OpenAPI / .http / Astra',
             onTap: () => _import(context),
           ),
           _IconAction(

@@ -713,6 +713,13 @@ Future<String?> showExportDialog(BuildContext context) {
           ),
           SizedBox(height: 8),
           _ExportOption(
+            icon: Icons.cloud_queue_rounded,
+            title: 'Insomnia v4',
+            description: 'Export as an Insomnia export file, including environments.',
+            onTap: () => Navigator.of(ctx).pop('insomnia'),
+          ),
+          SizedBox(height: 8),
+          _ExportOption(
             icon: Icons.description_outlined,
             title: 'OpenAPI 3.0',
             description: 'Generate OpenAPI docs from your requests, ready for API documentation sites.',

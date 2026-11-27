@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../services/file_io.dart';
+import '../services/runner_report.dart';
 import '../state.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -296,54 +297,29 @@ Future<void> showRunnerDialog(
               ),
             ),
             actions: [
-              GhostButton(
-                label: 'Export Report',
-                icon: Icons.download_outlined,
-                onPressed: steps.isEmpty || running
-                    ? null
-                    : () async {
-                        final path = await saveJsonFile(
-                          'astra-runner-'
-                          '${(group?.name ?? 'collection').replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '-')}-'
-                          '${DateTime.now().millisecondsSinceEpoch}.json',
-                          {
-                            'name': group?.name ?? 'Collection',
-                            'exportedAt': DateTime.now().toIso8601String(),
-                            'summary': {
-                              'totalRuns': summary.totalRuns,
-                              'passedTests': summary.passedTests,
-                              'failedTests': summary.failedTests,
-                              'failedRequests': summary.failedRequests,
-                              'durationMs': summary.durationMs,
-                              'averageResponseMs': summary.averageMs,
-                              'responseSizeBytes': summary.responseBytes,
-                            },
-                            'results': [
-                              for (final step in steps)
-                                {
-                                  'iteration': step.iteration,
-                                  'request': step.name,
-                                  'method': step.method,
-                                  'status': step.status,
-                                  'timeMs': step.ms,
-                                  'passed': step.passed,
-                                  'error': step.error,
-                                  'failures': step.failures,
-                                },
-                            ],
-                            'failures': [
-                              for (final step in failures)
-                                {
-                                  'iteration': step.iteration,
-                                  'request': step.name,
-                                  'status': step.status,
-                                  'reason': _failureReason(step),
-                                },
-                            ],
-                          },
-                        );
-                        if (path != null) state.showToast('Report exported');
-                      },
+              PopupMenuButton<String>(
+                tooltip: 'Export Report',
+                enabled: steps.isNotEmpty && !running,
+                onSelected: (format) => _exportRunnerReport(
+                  format: format,
+                  state: state,
+                  collectionName: group?.name ?? 'Collection',
+                  summary: summary,
+                  steps: steps,
+                  failures: failures,
+                ),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'json', child: Text('JSON report')),
+                  PopupMenuItem(value: 'csv', child: Text('CSV report')),
+                  PopupMenuItem(value: 'junit', child: Text('JUnit XML')),
+                ],
+                child: IgnorePointer(
+                  child: GhostButton(
+                    label: 'Export Report',
+                    icon: Icons.download_outlined,
+                    onPressed: () {},
+                  ),
+                ),
               ),
               SizedBox(width: 8),
               GhostButton(
@@ -461,6 +437,89 @@ String _formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
   return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
+Future<void> _exportRunnerReport({
+  required String format,
+  required AppState state,
+  required String collectionName,
+  required _RunSummary summary,
+  required List<RunStepResult> steps,
+  required List<RunStepResult> failures,
+}) async {
+  final safeName =
+      collectionName.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '-');
+  final stamp = DateTime.now().millisecondsSinceEpoch;
+  final startedAt = steps.isEmpty
+      ? DateTime.now()
+      : DateTime.fromMillisecondsSinceEpoch(
+          state.runStartedAt == 0
+              ? DateTime.now().millisecondsSinceEpoch
+              : state.runStartedAt,
+        );
+  String? path;
+  switch (format) {
+    case 'csv':
+      path = await saveTextFile(
+        'astra-runner-$safeName-$stamp.csv',
+        runnerReportCsv(
+          collection: collectionName,
+          startedAt: startedAt,
+          steps: steps,
+        ),
+        'text/csv',
+      );
+    case 'junit':
+      path = await saveTextFile(
+        'astra-runner-$safeName-$stamp.xml',
+        runnerReportJunit(
+          collection: collectionName,
+          startedAt: startedAt,
+          steps: steps,
+        ),
+        'application/xml',
+      );
+    default:
+      path = await saveJsonFile(
+        'astra-runner-$safeName-$stamp.json',
+        {
+          'name': collectionName,
+          'exportedAt': DateTime.now().toIso8601String(),
+          'summary': {
+            'totalRuns': summary.totalRuns,
+            'passedTests': summary.passedTests,
+            'failedTests': summary.failedTests,
+            'failedRequests': summary.failedRequests,
+            'durationMs': summary.durationMs,
+            'averageResponseMs': summary.averageMs,
+            'responseSizeBytes': summary.responseBytes,
+          },
+          'results': [
+            for (final step in steps)
+              {
+                'iteration': step.iteration,
+                'request': step.name,
+                'method': step.method,
+                'status': step.status,
+                'timeMs': step.ms,
+                'passed': step.passed,
+                'error': step.error,
+                'failures': step.failures,
+              },
+          ],
+          'failures': [
+            for (final step in failures)
+              {
+                'iteration': step.iteration,
+                'request': step.name,
+                'status': step.status,
+                'reason': _failureReason(step),
+              },
+          ],
+        },
+      );
+  }
+  if (path != null) state.showToast('Report exported');
 }
 
 Widget _configBar({

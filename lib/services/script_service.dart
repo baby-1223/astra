@@ -743,6 +743,7 @@ var pm = {
   }
 };
 
+pm.jsonpath = pm.jsonPath;
 pm.response = __astraResponse;
 
 function __astraDump() {

@@ -7,6 +7,8 @@ part 'converters/postman_import.dart';
 part 'converters/postman_export.dart';
 part 'converters/openapi_import.dart';
 part 'converters/openapi_export.dart';
+part 'converters/insomnia.dart';
+part 'converters/http_file.dart';
 
 class ImportResult {
   final List<CollectionEntry> collections;

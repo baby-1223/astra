@@ -37,29 +37,40 @@ String mimeFor(String path) {
   return _mimeTypes[name.substring(index + 1).toLowerCase()] ?? 'application/octet-stream';
 }
 
-class PickedJson {
+class PickedImport {
   final String fileName;
-  final Map<String, dynamic> data;
+  final Map<String, dynamic>? data;
+  final String? text;
 
-  PickedJson(this.fileName, this.data);
+  PickedImport.data(this.fileName, Map<String, dynamic> this.data) : text = null;
+
+  PickedImport.text(this.fileName, String this.text) : data = null;
 }
 
-/// 选择并解析导入文件；支持 JSON 和 Postman 导出的 ZIP 数据包。
-Future<PickedJson?> pickImportFile() async {
+/// 选择并解析导入文件；支持 JSON、Postman ZIP 数据包和 `.http` / `.rest` 文本。
+Future<PickedImport?> pickImportFile() async {
   final file = await FilePicker.pickFile(
     dialogTitle: 'Select Import File',
     type: FileType.custom,
-    allowedExtensions: ['json', 'zip'],
+    allowedExtensions: ['json', 'zip', 'http', 'rest'],
   );
   if (file == null) return null;
 
   final bytes = await file.readAsBytes().catchError((err) {
     throw FormatException('Unable to read the selected file. Make sure it is accessible and try again ($err)');
   });
+  final extension = file.name.contains('.')
+      ? file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase()
+      : '';
   final isZip = bytes.length > 4 && bytes[0] == 0x50 && bytes[1] == 0x4B;
-  if (isZip) return PickedJson(file.name, _readDataDumpZip(bytes));
+  if (isZip) {
+    return PickedImport.data(file.name, _readDataDumpZip(bytes));
+  }
   final text = utf8.decode(bytes, allowMalformed: true);
-  return PickedJson(file.name, _decodeJsonObject(text));
+  if (extension == 'http' || extension == 'rest') {
+    return PickedImport.text(file.name, text);
+  }
+  return PickedImport.data(file.name, _decodeJsonObject(text));
 }
 
 Map<String, dynamic> _decodeJsonObject(String text) {
@@ -146,6 +157,23 @@ Future<String?> saveJsonFile(String suggestedName, Map<String, dynamic> data) as
     fileName: suggestedName,
     mimeType: 'application/json',
     bytes: bytes,
+  );
+  if (uri == null) return null;
+  if (uri.scheme == 'file') return uri.toFilePath();
+  return '$uri';
+}
+
+/// 保存任意文本内容（Runner 报告等）；返回保存路径，取消时返回 null。
+Future<String?> saveTextFile(
+  String suggestedName,
+  String text,
+  String mimeType,
+) async {
+  final uri = await FilePicker.saveFile(
+    dialogTitle: 'Export',
+    fileName: suggestedName,
+    mimeType: mimeType,
+    bytes: Uint8List.fromList(utf8.encode(text)),
   );
   if (uri == null) return null;
   if (uri.scheme == 'file') return uri.toFilePath();
