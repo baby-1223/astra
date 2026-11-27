@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astra — 本地优先的 API 与 WebSocket 调试工具</title>
+<meta name="description" content="Astra 是一个本地优先的 API 与 WebSocket 调试工具，提供独立桌面端与 IntelliJ IDEA 插件。无需登录，请求数据不离开你的机器。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d10'/%3E%3Cpath d='M16 5l3.2 7.4L27 16l-7.8 3.6L16 27l-3.2-7.4L5 16l7.8-3.6z' fill='%235eead4'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#08090b;
+    --panel:#0f1318;
+    --panel-2:#131820;
+    --line:#212934;
+    --line-soft:#1a212b;
+    --text:#e8eef5;
+    --muted:#93a1b1;
+    --accent:#5eead4;
+    --accent-dim:rgba(94,234,212,.12);
+    --amber:#fbbf24;
+    --radius:16px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;line-height:1.6;
+    background-image:
+      radial-gradient(900px 480px at 18% -8%,rgba(94,234,212,.10),transparent 65%),
+      radial-gradient(700px 420px at 88% 4%,rgba(251,191,36,.05),transparent 60%),
+      linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+    background-size:auto,auto,56px 56px,56px 56px;
+    background-position:0 0,0 0,-1px -1px,-1px -1px;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);
+    background:rgba(8,9,11,.78);border-bottom:1px solid var(--line-soft)}
+  .nav{height:64px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:.2px}
+  .brand svg{width:26px;height:26px}
+  .nav-links{display:flex;gap:26px;font-size:14px;color:var(--muted)}
+  .nav-links a:hover{color:var(--text)}
+  .nav-cta{font-size:13px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;color:var(--text)}
+  .nav-cta:hover{border-color:var(--accent);color:var(--accent)}
+
+  .hero{padding:84px 0 56px;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+    border:1px solid rgba(94,234,212,.25);background:var(--accent-dim);padding:5px 10px;border-radius:999px}
+  h1{font-size:clamp(34px,4.6vw,54px);line-height:1.14;letter-spacing:-.02em;margin:20px 0 18px;font-weight:680}
+  h1 em{font-style:normal;color:var(--accent)}
+  .lead{color:var(--muted);font-size:17px;max-width:520px;margin:0 0 30px}
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;height:46px;padding:0 20px;
+    border-radius:11px;font-size:14px;font-weight:600;border:1px solid transparent;transition:.18s}
+  .btn-primary{background:var(--accent);color:#04221d}
+  .btn-primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .btn-ghost{border-color:var(--line);color:var(--text);background:rgba(255,255,255,.02)}
+  .btn-ghost:hover{border-color:#33404f;background:rgba(255,255,255,.045)}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:18px;font-family:var(--mono);font-size:12px;color:#778394}
+  .hero-meta span{display:flex;align-items:center;gap:7px}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(94,234,212,.09)}
+
+  .terminal{background:linear-gradient(180deg,#11161d,#0c1015);border:1px solid var(--line);
+    border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.9)}
+  .term-bar{display:flex;align-items:center;gap:7px;padding:12px 14px;border-bottom:1px solid var(--line-soft)}
+  .term-bar i{width:10px;height:10px;border-radius:50%;background:#2b3542;display:block}
+  .term-bar i:nth-child(1){background:#3d4a5a}
+  .term-title{margin-left:8px;font-family:var(--mono);font-size:11px;color:#6f7c8c}
+  .term-body{padding:18px 18px 20px;font-family:var(--mono);font-size:12.5px;line-height:1.85;overflow-x:auto}
+  .req{color:#cfd8e3;white-space:nowrap}
+  .method{color:var(--amber);font-weight:700;margin-right:8px}
+  .kv{color:#7c8b9c}
+  .str{color:#8bd5c2}
+  .num{color:#f0b37e}
+  .line{color:#39434f;user-select:none;margin-right:10px}
+  .term-status{display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:1px solid var(--line-soft);
+    font-family:var(--mono);font-size:11.5px;color:#7c8b9c}
+  .pill{color:#8ef0b6;border:1px solid rgba(142,240,182,.28);background:rgba(142,240,182,.08);
+    padding:2px 8px;border-radius:6px}
+
+  section{padding:52px 0}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#65717f;margin-bottom:8px}
+  h2{font-size:clamp(24px,3vw,32px);letter-spacing:-.015em;margin:0;font-weight:650}
+  .section-head p{color:var(--muted);font-size:14px;margin:0;max-width:420px}
+
+  .terminals{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .card{background:linear-gradient(180deg,rgba(19,24,32,.86),rgba(13,17,23,.92));
+    border:1px solid var(--line);border-radius:var(--radius);padding:26px;position:relative;overflow:hidden}
+  .card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(420px 200px at 100% 0,rgba(94,234,212,.06),transparent 60%)}
+  .card-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .icon-box{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.025)}
+  .icon-box svg{width:19px;height:19px}
+  .card h3{margin:0;font-size:17px;font-weight:640}
+  .card .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .chip{font-family:var(--mono);font-size:11px;color:#9fb0c1;border:1px solid var(--line);
+    padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.02)}
+  .card ul{margin:0 0 22px;padding:0;list-style:none;display:grid;gap:8px;font-size:13.5px;color:#b9c4d0}
+  .card li{padding-left:20px;position:relative}
+  .card li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:2px;
+    background:var(--accent);opacity:.75}
+  .dl-row{display:flex;flex-wrap:wrap;gap:9px}
+  .dl{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:9px;
+    border:1px solid var(--line);font-size:12.5px;font-weight:600;color:#dbe4ee;transition:.16s}
+  .dl:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+  .dl small{font-family:var(--mono);font-weight:400;color:#788696}
+  .all-versions{display:inline-block;margin-top:16px;font-size:12.5px;color:#7f8d9d;
+    border-bottom:1px dashed #3a4654;padding-bottom:1px}
+  .all-versions:hover{color:var(--accent);border-color:var(--accent)}
+
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .feature{background:rgba(15,19,24,.72);border:1px solid var(--line-soft);border-radius:13px;padding:20px}
+  .feature .f-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    background:var(--accent-dim);border:1px solid rgba(94,234,212,.18);margin-bottom:12px}
+  .feature .f-icon svg{width:15px;height:15px}
+  .feature h4{margin:0 0 6px;font-size:14.5px;font-weight:620}
+  .feature p{margin:0;font-size:13px;color:#8e9cab;line-height:1.65}
+  .feature code{font-family:var(--mono);font-size:.92em;color:#a9e8dc;background:rgba(94,234,212,.08);
+    padding:1px 4px;border-radius:4px}
+
+  .compare{width:100%;border-collapse:collapse;font-size:13.5px;
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .compare th,.compare td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line-soft)}
+  .compare th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7b8797;background:rgba(255,255,255,.02)}
+  .compare td:first-child{color:#c3ced9}
+  .compare td{color:#93a1b1}
+  .compare tr:last-child td{border-bottom:none}
+  .yes{color:var(--accent)}
+  .no{color:#5d6a79}
+
+  .start{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .steps{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+  .steps h4{margin:0 0 14px;font-size:14px;font-weight:640;display:flex;align-items:center;gap:8px}
+  .steps ol{margin:0;padding-left:18px;color:#9aa8b7;font-size:13.5px;display:grid;gap:9px}
+  .steps code{font-family:var(--mono);font-size:12px;color:#bfeee3;background:rgba(94,234,212,.08);
+    border:1px solid rgba(94,234,212,.12);padding:2px 6px;border-radius:5px}
+  .note{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:12.5px;color:#778594}
+
+  footer{border-top:1px solid var(--line-soft);padding:34px 0 44px;margin-top:20px}
+  .foot{display:flex;align-items:flex-start;justify-content:space-between;gap:30px;flex-wrap:wrap}
+  .foot-brand{display:flex;flex-direction:column;gap:8px}
+  .foot-brand p{margin:0;color:#74808f;font-size:12.5px;max-width:340px}
+  .foot-links{display:flex;gap:28px;font-size:13px;color:#8b98a7;flex-wrap:wrap}
+  .foot-links a:hover{color:var(--accent)}
+  .foot-meta{font-family:var(--mono);font-size:11px;color:#5f6b79;margin-top:6px}
+
+  @media (max-width:920px){
+    .hero{grid-template-columns:1fr;gap:36px;padding-top:56px}
+    .terminals,.start{grid-template-columns:1fr}
+    .features{grid-template-columns:repeat(2,1fr)}
+    .nav-links{display:none}
+    .section-head{flex-direction:column;align-items:flex-start;gap:8px}
+  }
+  @media (max-width:560px){
+    .features{grid-template-columns:1fr}
+    .wrap{padding:0 18px}
+    .hero{padding-bottom:36px}
+    section{padding:38px 0}
+    .card{padding:22px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .btn-primary:hover{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Astra 首页">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0f1318" stroke="#24303c"/><path d="M16 5l3.2 7.4L27 16l-7.8 3.6L16 27l-3.2-7.4L5 16l7.8-3.6z" fill="#5eead4"/></svg>
+      Astra
+    </a>
+    <nav class="nav-links">
+      <a href="#download">下载</a>
+      <a href="#features">功能</a>
+      <a href="#compare">两端对比</a>
+      <a href="#start">安装</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/compiler-says-no/astra" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow"><span class="dot"></span>本地优先 · 无需登录</span>
+      <h1>把 API 调试<br>留在<em>你自己的机器</em>上</h1>
+      <p class="lead">
+        Astra 是一个本地优先的 API 与 WebSocket 调试工具。独立桌面端负责日常调试、抓包与 Mock；
+        IDEA 插件直接读取 Spring Controller 和 <code>application.yml</code>，在写代码的地方发起请求。
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/compiler-says-no/astra/releases" target="_blank" rel="noopener">下载桌面端</a>
+        <a class="btn btn-ghost" href="https://plugins.jetbrains.com/plugin/36348-astra" target="_blank" rel="noopener">在 Marketplace 安装插件</a>
+      </div>
+      <div class="hero-meta">
+        <span><span class="dot"></span>HTTP / WebSocket / SSE</span>
+        <span><span class="dot"></span>数据保存在本地</span>
+        <span><span class="dot"></span>免费使用</span>
+      </div>
+    </div>
+
+    <div class="terminal" aria-hidden="true">
+      <div class="term-bar"><i></i><i></i><i></i><span class="term-title">astra — orders.http</span></div>
+      <div class="term-body">
+        <div class="req"><span class="method">POST</span> {{baseUrl}}/api/orders</div>
+        <div class="kv">Authorization: Bearer <span class="str">{{token}}</span></div>
+        <div class="kv">Content-Type: application/json</div>
+        <div style="height:10px"></div>
+        <div><span class="line">1</span>{</div>
+        <div><span class="line">2</span>  <span class="str">"sku"</span>: <span class="str">"ASTRA-PRO"</span>,</div>
+        <div><span class="line">3</span>  <span class="str">"quantity"</span>: <span class="num">2</span>,</div>
+        <div><span class="line">4</span>  <span class="str">"note"</span>: <span class="str">"gift wrap"</span></div>
+        <div><span class="line">5</span>}</div>
+      </div>
+      <div class="term-status">
+        <span class="pill">201 Created</span><span>86 ms</span><span>·</span><span>1.2 KB</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Download</div>
+          <h2>选择你的终端</h2>
+        </div>
+        <p>两端各自保存在本地，互不依赖：桌面端适合完整调试与抓包，插件贴着代码工作。已有集合可通过 Astra 备份、Postman 或 OpenAPI 在两端之间迁移。</p>
+      </div>
+
+      <div class="terminals">
+        <article class="card">
+          <div class="card-head">
+            <div class="icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3M7 9l2 2-2 2M12 13h4"/>
+              </svg>
+            </div>
+            <div>
+              <h3>Astra Desktop</h3>
+              <p class="sub">独立桌面端 · 完整调试能力</p>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">macOS · 通用包</span>
+            <span class="chip">Windows 10/11 · x64</span>
+            <span class="chip">v2.3.0</span>
+          </div>
+          <ul>
+            <li>HTTP、WebSocket、SSE、GraphQL、gRPC-Web</li>
+            <li>集合与 Runner、历史记录、响应 Diff</li>
+            <li>本地 Mock 服务与 HTTPS 抓包代理</li>
+            <li>OAuth2、Cookie、代理、客户端证书</li>
+          </ul>
+          <div class="dl-row">
+            <a class="dl" href="https://github.com/compiler-says-no/astra/releases" target="_blank" rel="noopener">
+              下载桌面端 <small>GitHub Releases</small>
+            </a>
+            <a class="dl" href="#start">安装步骤</a>
+          </div>
+          <a class="all-versions" href="https://github.com/compiler-says-no/astra/releases" target="_blank" rel="noopener">查看所有版本与更新日志 →</a>
+        </article>
+
+        <article class="card" id="download-plugin">
+          <div class="card-head">
+            <div class="icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 4l-4 4 4 4M16 4l4 4-4 4M13 3l-2 18"/>
+              </svg>
+            </div>
+            <div>
+              <h3>Astra for IntelliJ IDEA</h3>
+              <p class="sub">IDE 插件 · 贴着代码调试</p>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">IntelliJ IDEA 2024.2+</span>
+            <span class="chip">Community / Ultimate</span>
+            <span class="chip">v0.4.2</span>
+          </div>
+          <ul>
+            <li>从 Spring Controller 一键生成请求</li>
+            <li>读取 <code>application.yml</code> 与 profile 变量</li>
+            <li>导入 Postman、Insomnia、OpenAPI、<code>.http</code></li>
+            <li>集合 Runner 支持 JSON / CSV / JUnit XML 报告</li>
+          </ul>
+          <div class="dl-row">
+            <a class="dl" href="https://plugins.jetbrains.com/plugin/36348-astra" target="_blank" rel="noopener">
+              在 Marketplace 安装 <small>plugins.jetbrains.com</small>
+            </a>
+            <a class="dl" href="#start">安装步骤</a>
+          </div>
+          <a class="all-versions" href="https://github.com/compiler-says-no/astra-intellij/releases" target="_blank" rel="noopener">查看所有版本与更新日志 →</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Features</div>
+          <h2>调试一个接口需要的，基本都在</h2>
+        </div>
+        <p>没有账号体系，没有云同步，没有把请求发往第三方。打开就能用。</p>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+          <h4>HTTP / REST</h4>
+          <p>方法、Params、Headers、Cookie、多种 Body、代理与客户端证书，覆盖日常接口调试。</p>
+        </div>
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h4l3 5-3 5H4M20 7h-4l-3 5 3 5h4"/></svg></div>
+          <h4>长连接与协议</h4>
+          <p>WebSocket、SSE 实时流、GraphQL、gRPC-Web，响应格式自动识别。</p>
+        </div>
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
+          <h4>集合与环境</h4>
+          <p>集合/文件夹脚本继承、多环境变量、变量补全，接口之间可串联。</p>
+        </div>
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5v8l-9 5-9-5V8z"/><path d="M12 12l9-4M12 12v9M12 12L3 8"/></svg></div>
+          <h4>Mock 与抓包</h4>
+          <p>本地 Mock 路由快速伪造响应；桌面端提供 HTTPS 抓包，把真实流量存成请求。</p>
+        </div>
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4l-4 4 4 4M16 4l4 4-4 4M13 3l-2 18"/></svg></div>
+          <h4>Spring 深度集成</h4>
+          <p>插件解析 Controller、泛型 DTO、record、multipart 与父类路径，生成可直接发送的请求。</p>
+        </div>
+        <div class="feature">
+          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h4>数据留在本地</h4>
+          <p>工作区就是一个 JSON 文件，自动保留备份；敏感凭据存入系统凭据库，不落明文。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Compare</div>
+          <h2>桌面端还是 IDEA 插件？</h2>
+        </div>
+        <p>两者可以同时装。插件适合写代码时顺手验证，桌面端适合完整调试与团队资产沉淀。</p>
+      </div>
+      <table class="compare">
+        <thead>
+          <tr><th>能力</th><th>桌面端</th><th>IDEA 插件</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>独立运行，不依赖 IDE</td><td class="yes">支持</td><td class="no">—</td></tr>
+          <tr><td>从 Spring Controller 生成请求</td><td class="no">—</td><td class="yes">支持</td></tr>
+          <tr><td>读取 application.yml / profile 变量</td><td class="no">—</td><td class="yes">支持</td></tr>
+          <tr><td>HTTPS 抓包代理</td><td class="yes">支持</td><td class="no">—</td></tr>
+          <tr><td>Mock 服务</td><td class="yes">可编辑路由</td><td class="yes">可编辑自定义路由</td></tr>
+          <tr><td>集合运行报告</td><td>JSON / CSV / JUnit XML</td><td>JSON / CSV / JUnit XML</td></tr>
+          <tr><td>数据存储</td><td>本地工作区文件</td><td>IDE 配置目录，跨窗口共享</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="kicker">Getting started</div>
+          <h2>三步开始</h2>
+        </div>
+        <p>下载后不需要注册账号，直接新建请求或打开已有集合。</p>
+      </div>
+
+      <div class="start">
+        <div class="steps">
+          <h4>桌面端</h4>
+          <ol>
+            <li><b>Windows</b>：解压后保留同目录的 <code>data\</code> 与 DLL，运行 <code>Astra.exe</code>。</li>
+            <li><b>macOS</b>：解压后把 Astra 拖入「应用程序」。首次打开若被系统拦截，右键选择「打开」。</li>
+            <li>新建请求，或从 Postman / Insomnia / OpenAPI / <code>.http</code> 导入现有集合。</li>
+          </ol>
+          <div class="note">macOS 如仍提示来源不明，可执行：<code>xattr -dr com.apple.quarantine /Applications/Astra.app</code></div>
+        </div>
+        <div class="steps">
+          <h4>IDEA 插件</h4>
+          <ol>
+            <li>打开 <code>Settings → Plugins → Marketplace</code>，搜索 <b>Astra</b> 并安装（或直接访问 <a href="https://plugins.jetbrains.com/plugin/36348-astra" target="_blank" rel="noopener">插件主页</a>）。</li>
+            <li>也可以从 <a href="https://github.com/compiler-says-no/astra-intellij/releases" target="_blank" rel="noopener">GitHub Releases</a> 下载 zip，在 <code>⚙ → Install Plugin from Disk…</code> 中安装。</li>
+            <li>重启 IDE，在 Spring Controller 上右键选择 <code>Generate Astra Requests</code>。</li>
+          </ol>
+          <div class="note">插件也会自动读取项目里的 <code>application.yml</code>，把端口、context-path 与变量带入环境。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="foot-brand">
+      <a class="brand" href="#top">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0f1318" stroke="#24303c"/><path d="M16 5l3.2 7.4L27 16l-7.8 3.6L16 27l-3.2-7.4L5 16l7.8-3.6z" fill="#5eead4"/></svg>
+        Astra
+      </a>
+      <p>本地优先的 API 与 WebSocket 调试工具。桌面端与 IDE 插件，数据各自保存在本地。</p>
+      <div class="foot-meta">Desktop v2.3.0 · Plugin v0.4.2</div>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/compiler-says-no/astra" target="_blank" rel="noopener">桌面端源码</a>
+      <a href="https://github.com/compiler-says-no/astra-intellij" target="_blank" rel="noopener">插件源码</a>
+      <a href="https://github.com/compiler-says-no/astra/releases" target="_blank" rel="noopener">桌面端下载</a>
+      <a href="https://github.com/compiler-says-no/astra-intellij/releases" target="_blank" rel="noopener">插件下载</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
